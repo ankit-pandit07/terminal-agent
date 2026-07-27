@@ -1,23 +1,6 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import app from './app.js';
+import { env } from './config/env.js';
 
-dotenv.config();
-
-const app=express();
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/health',(req,res)=>{
-    res.json({
-        success:true,
-        message:'Terminal Agent Backend Running'
-    })
-})
-
-const PORT=process.env.PORT || 5000;
-
-app.listen(PORT,()=>{
-    console.log(`Server is running on port ${PORT}`);
+app.listen(env.PORT,()=>{
+    console.log(`Server running on http://localhost:${env.PORT}`)
 })
