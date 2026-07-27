@@ -1,33 +1,18 @@
-import { ToolRegistry } from "../tools/base/tool.registry.js";
-import { EchoTool } from "../tools/echo/echo.tool.js";
-import type { AgentRequest,AgentResponse } from "./agent.js";
+import { ExecutorService } from "../executor/executor.service.js";
+import { PlannerService } from "../planner/planner.service.js";
+import type { AgentRequest, AgentResponse } from "./agent.js";
 
-export class AgentService {
-    private registry=new ToolRegistry();
+export class AgentService{
+    private planner=new PlannerService();
+    private executor=new ExecutorService();
 
-    constructor(){
-        this.registry.register(new EchoTool());
-    }
-    async process(
-        request:AgentRequest
-    ):Promise<AgentResponse>{
+    async process(request:AgentRequest):Promise<AgentResponse>{
+        const plan=this.planner.createPlan(request.message);
+        const result=await this.executor.execute(plan);
 
-        const tool=this.registry.get("echo");
-
-        if(!tool){
-        return {
-            success:false,
-            response:"Tool not found"
+        return{
+            success:result.success,
+            response:result.output
         }
-    }
-
-    const result=await tool.execute({
-        message:request.message,
-    });
-
-    return {
-        success:true,
-        response:String(result.data)
-    }
     }
 }
