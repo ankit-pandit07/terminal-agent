@@ -7,8 +7,8 @@ export class AgentService{
     private executor=new ExecutorService();
 
     async process(request:AgentRequest):Promise<AgentResponse>{
-        const plan=this.planner.createPlan(request.message);
-        const result=await this.executor.execute(plan);
+        const plan=await this.planner.createPlan(request.message);
+        const result= await this.executor.execute(plan);
 
         return{
             success:result.success,
