@@ -1,5 +1,6 @@
 export interface AgentRequest {
     message:string;
+    
 }
 
 export interface AgentResponse {
