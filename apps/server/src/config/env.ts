@@ -9,6 +9,6 @@ export const env = {
 
     //Future use
     DATABASE_URL: process.env.DATABASE_URL || "",
-    OLLAMA_API_KEY: process.env.OLLAMA_API_KEY || "",
+    OLLAMA_URL: process.env.OLLAMA_URL ?? "http://localhost:11434",
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
 };
