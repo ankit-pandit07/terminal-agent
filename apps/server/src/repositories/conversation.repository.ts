@@ -17,11 +17,18 @@ export class ConversationRepository{
             }
         });
     }
-
     async findById(id:string){
         return prisma.conversation.findUnique({
             where:{
                 id,
+            }
+        })
+    }
+    async findRecent(limit=10){
+        return prisma.conversation.findMany({
+            take:limit,
+            orderBy:{
+                createdAt:"desc"
             }
         })
     }

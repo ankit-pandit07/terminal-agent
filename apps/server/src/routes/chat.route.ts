@@ -12,5 +12,10 @@ router.post("/",async(req,res)=>{
 
     res.json(result);
 })
+router.get("/conversations", async (_, res) => {
+    const history = await agent.getHistory();
+
+    res.json(history);
+});
 
 export default router;

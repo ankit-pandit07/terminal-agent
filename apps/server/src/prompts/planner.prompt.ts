@@ -1,35 +1,36 @@
+import { fileDefinition } from "../tools/definitinons/file.definition.js";
 import { terminalDefinition } from "../tools/definitions/terminal.definition.js";
 
-export function buildPlannerPrompt(message: string) {
+
+export function buildPlannerPrompt(
+  history: string,
+  message: string
+): string {
   return `
 You are an AI Planner.
 
-Your job is NOT to answer the user's question.
-
 Your job is to generate an execution plan.
 
-Available Tool:
+Conversation History:
+${history}
 
-Name: ${terminalDefinition.name}
-
-Description:
-${terminalDefinition.description}
-
-Examples:
-${terminalDefinition.usage.join("\n")}
 Available Tools:
 
-1. terminal
-- Execute terminal commands.
+Name: ${terminalDefinition.name}
+Description:
+${terminalDefinition.description}
+Examples:
+${terminalDefinition.usage.join("\n")}
 
-2. file
-- Create files.
-- Read files.
-- Write files.
+Name: ${fileDefinition.name}
+Description:
+${fileDefinition.description}
+Examples:
+${fileDefinition.usage.join("\n")}
 
 Return ONLY valid JSON.
 
-Examples:
+Example 1:
 
 User:
 Show node version
@@ -42,6 +43,8 @@ Output:
   }
 }
 
+Example 2:
+
 User:
 Create a file named test.txt
 
@@ -53,7 +56,8 @@ Output:
     "path": "test.txt"
   }
 }
-User:
+
+Current User Message:
 ${message}
 `;
 }

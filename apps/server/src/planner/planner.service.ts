@@ -8,9 +8,9 @@ export class PlannerService {
   private llm = LLMFactory.create();
   private parser=new JsonParser();
 
-  async createPlan(message: string): Promise<Plan> {
+  async createPlan(message: string,history:string): Promise<Plan> {
 
-const prompt = buildPlannerPrompt(message);
+const prompt = buildPlannerPrompt(history,message);
     const response = await this.llm.generate({
       prompt,
     });
