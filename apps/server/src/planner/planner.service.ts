@@ -1,45 +1,20 @@
 import { LLMFactory } from "../llm/llm.factory.js";
-import type{ Plan } from "./planner.js";
+import type { Plan } from "./planner.js";
+import { JsonParser } from "../parser/json.parser.js";
+import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
 
-export class PlannerService{
-    private llm=LLMFactory.create();
-   async createPlan(message:string):Promise<Plan>{
-   const prompt = `
-You are an AI planner.
+export class PlannerService {
+    
+  private llm = LLMFactory.create();
+  private parser=new JsonParser();
 
-Convert the user request into JSON.
+  async createPlan(message: string): Promise<Plan> {
 
-Example:
-
-User:
-Show node version
-
-Output:
-
-{
-  "tool":"terminal",
-  "input":{
-      "command":"node -v"
+const prompt = buildPlannerPrompt(message);
+    const response = await this.llm.generate({
+      prompt,
+    });
+   
+    return this.parser.parse(response.text);
   }
-}
-
-User:
-
-${message}
-
-Return ONLY JSON.
-`;
-
-const response = await this.llm.generate({
-    prompt,
-})
-
-console.log(response.text)
-        return {
-            tool:"terminal",
-            input:{
-                command:message
-            }
-        }
-    }
 }
