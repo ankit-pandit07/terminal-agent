@@ -1,25 +1,38 @@
-export function buildPlannerPrompt(message: string): string {
+import { terminalDefinition } from "../tools/definitions/terminal.definition.js";
+
+export function buildPlannerPrompt(message: string) {
   return `
-You are an AI Planner for a Terminal Agent.
+You are an AI Planner.
 
-Your job is to convert the user's request into a JSON execution plan.
+Your job is NOT to answer the user's question.
 
-Rules:
-- Return ONLY valid JSON.
-- Do not add explanations.
-- Do not use markdown.
-- The JSON must follow this schema:
+Your job is to generate an execution plan.
 
-{
-  "tool": "terminal",
-  "input": {
-    "command": "<terminal command>"
-  }
-}
+Available Tool:
+
+Name: ${terminalDefinition.name}
+
+Description:
+${terminalDefinition.description}
+
+Examples:
+${terminalDefinition.usage.join("\n")}
+Available Tools:
+
+1. terminal
+- Execute terminal commands.
+
+2. file
+- Create files.
+- Read files.
+- Write files.
+
+Return ONLY valid JSON.
 
 Examples:
 
-User: Show node version
+User:
+Show node version
 
 Output:
 {
@@ -29,16 +42,17 @@ Output:
   }
 }
 
-User: Show npm version
+User:
+Create a file named test.txt
 
 Output:
 {
-  "tool": "terminal",
+  "tool": "file",
   "input": {
-    "command": "npm -v"
+    "action": "create",
+    "path": "test.txt"
   }
 }
-
 User:
 ${message}
 `;
