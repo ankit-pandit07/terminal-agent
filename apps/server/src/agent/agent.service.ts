@@ -33,12 +33,12 @@ export class AgentService {
     this.memory.add("user", request.message);
     const history = await this.conversationRepository.findRecent(10);
     const context = this.buildContext(history);
-    let observation="";
+    let executionHistory = "";
     for (let i=0; i<5; i++){
       const plan=await this.planner.createPlan(
         request.message,
         context,
-        observation
+        executionHistory
       );
 
       const result= await this.executor.execute(plan);
@@ -57,7 +57,19 @@ export class AgentService {
         };
       }
 
-      observation=result.observation ?? result.output;
+      const step = plan.steps[0];
+
+executionHistory += `
+Tool: ${step?.tool}
+
+Input:
+${JSON.stringify(step?.input, null, 2)}
+
+Result:
+${result.output}
+
+------------------------
+`;
     }
 
     return {

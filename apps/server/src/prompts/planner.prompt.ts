@@ -3,7 +3,8 @@ import { toolDefinitions } from "../tools/definitions/index.js";
 export function buildPlannerPrompt(
   history: string,
   message: string,
-  observation?: string
+  observation?: string,
+    projectContext?: string
 ): string {
   const tools = toolDefinitions
     .map(
@@ -33,9 +34,16 @@ You ONLY decide:
 - Which tool should be used.
 - What input should be passed to that tool.
 - In what order the tools should run.
+- Use the previous execution result to recover from errors.
+- Do not generate the exact same failing command unless the observation suggests a retry may succeed.
+- Prefer fixing the cause of the failure before continuing.
 
 Conversation History:
 ${history}
+
+Project Context:
+${projectContext || "Unknown"}
+
 
 ${
   observation
@@ -43,7 +51,20 @@ ${
 Previous Execution Result:
 ${observation}
 
-If the previous execution did not complete the user's goal, create the next best plan based on this result.
+
+
+The previous execution may have failed.
+
+Your job is to analyze the observation and produce the NEXT best plan.
+
+Rules:
+- Understand why the previous step failed.
+- Do NOT blindly repeat the same action.
+- If the error indicates a missing file, locate or create it.
+- If the error indicates a wrong directory, navigate to the correct directory first.
+- If the error indicates a missing dependency, install it.
+- If retrying the same command is appropriate, do so only if it has a reasonable chance of succeeding.
+- Continue working toward the user's original goal.
 `
     : ""
 }
@@ -146,7 +167,29 @@ Correct Output:
     }
   ]
 }
+User:
+Install Express.
 
+Previous Execution Result:
+npm ERR! package.json not found
+
+Correct Output:
+{
+  "steps": [
+    {
+      "tool": "terminal",
+      "input": {
+        "command": "pwd"
+      }
+    },
+    {
+      "tool": "terminal",
+      "input": {
+        "command": "ls"
+      }
+    }
+  ]
+}
 Current User Message:
 ${message}
 `;

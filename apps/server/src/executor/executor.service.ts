@@ -8,6 +8,7 @@ import { FileTool } from "../tools/file/file.tool.js";
 import { DirectoryTool } from "../tools/directory/directory.tool.js";
 import { EditorService } from "../editor/editor.service.js";
 import { SessionState } from "../session/session.state.js";
+import { SearchTool } from "../tools/search/search.tool.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -26,6 +27,7 @@ export class ExecutorService implements Executor {
     this.registry.register(this.fileTool);
     this.registry.register(this.directoryTool);
     this.registry.register(this.terminalTool);
+    this.registry.register(new SearchTool(this.session));
   
   }
   async execute(plan: Plan): Promise<ExecutionResult> {
@@ -39,7 +41,6 @@ export class ExecutorService implements Executor {
         const instruction = String(step.input.instruction);
 
         try {
-          const path = String(step.input.path);
           //Read
           const content = await this.fileTool.readFile(path);
 
@@ -54,7 +55,8 @@ export class ExecutorService implements Executor {
             return {
               success: false,
               output: "Editor returned JSON instead of source code.",
-              completed:true
+                observation: "Editor returned JSON instead of source code.",
+              completed:false
             };
           }
 
@@ -64,18 +66,24 @@ export class ExecutorService implements Executor {
 
           continue;
         } catch (error) {
-          return {
-            success: false,
-            output: error instanceof Error ? error.message : "Unknown error",
-            completed:true
-          };
-        }
+  const message =
+    error instanceof Error ? error.message : "Unknown error";
+
+  return {
+    success: false,
+    output: message,
+    observation: message,
+    completed: false,
+  };
+}
       }
       if (!tool) {
+        const message = `Tool "${step.tool}" not found`;
         return {
           success: false,
-          output: `Tool "${step.tool}" not found`,
-          completed:true
+          output: message,
+            observation: message,
+          completed:false
         };
       }
 
@@ -86,28 +94,32 @@ export class ExecutorService implements Executor {
           return {
             success: false,
             output: "Blocked: Unsafe command detected.",
-            completed:true
+             observation: "Blocked: Unsafe command detected.",
+            completed:false
           };
         }
       }
 
       const result = await tool.execute(step.input);
 
-      if (!result.success) {
-        return {
-          success: false,
-          output: String(result.data),
-          completed:true
-        };
-      }
+    if (!result.success) {
+  const message = String(result.data);
+
+  return {
+    success: false,
+    output: message,
+    observation: message,
+    completed: false,
+  };
+}
 
       outputs.push(String(result.data));
     }
 
-    return {
-      success: true,
-      output: outputs.join("\n"),
-      completed:true
-    };
+   return {
+  success: true,
+  output: outputs.join("\n"),
+  completed: true,
+};
   }
 }
