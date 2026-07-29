@@ -1,10 +1,17 @@
 import type { Tool, ToolInput, ToolOutput } from "../base/tool.interface.js";
 import { promises as fs } from "fs";
+
 export class FileTool implements Tool {
   name = "file";
 
   description = "Create, read and write files.";
+public async readFile(path: string): Promise<string> {
+  return await fs.readFile(path, "utf-8");
+}
 
+public async writeFile(path: string, content: string): Promise<void> {
+  await fs.writeFile(path, content);
+}
   async execute(input: ToolInput): Promise<ToolOutput> {
     const action = String(input.action);
 
@@ -22,7 +29,7 @@ export class FileTool implements Tool {
 
       case "read": {
         const path = String(input.path);
-        const content = await fs.readFile(path, "utf-8");
+        const content = await this.readFile(path);
         return {
           success: true,
           data: content,
@@ -32,7 +39,7 @@ export class FileTool implements Tool {
       case "write": {
         const path = String(input.path);
         const content = String(input.content);
-        await fs.writeFile(path, content);
+        await this.writeFile(path, content);
 
         return {
           success: true,
@@ -45,5 +52,7 @@ export class FileTool implements Tool {
           data: "Unknown action",
         };
     }
+    
   }
+  
 }

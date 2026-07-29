@@ -115,6 +115,24 @@ Correct Output:
     }
   ]
 }
+  Example 4
+
+User:
+Add a health route in src/app.ts
+
+Correct Output:
+{
+  "steps": [
+    {
+      "tool": "file",
+      "input": {
+        "action": "edit",
+        "path": "src/app.ts",
+        "instruction": "Add a GET /health route."
+      }
+    }
+  ]
+}
 
 Current User Message:
 ${message}

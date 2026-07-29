@@ -17,7 +17,6 @@ export class OllamaProvider implements LLMProvider {
                 model:"qwen2.5:3b",
                 prompt:request.prompt,
                 stream:false,
-                format: "json",
             })
         }
     );
