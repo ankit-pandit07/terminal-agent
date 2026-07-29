@@ -8,10 +8,12 @@ export class TerminalTool implements Tool {
 
     async execute(input: ToolInput): Promise<ToolOutput> {
         const command=String(input.command);
-
+const cwd=String(input.cwd);
         try{
+            
             const {stdout}=await execa(command,{
                 shell:true,
+                cwd
             });
 
             return {

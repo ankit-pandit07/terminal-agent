@@ -5,6 +5,7 @@ import type { ExecutionResult, Executor } from "./executor.js";
 import type { Plan } from "../planner/planner.js";
 import { CommandGuard } from "../security/command-guard.js";
 import { FileTool } from "../tools/file/file.tool.js";
+import { DirectoryTool } from "../tools/directory/directory.tool.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -14,34 +15,47 @@ export class ExecutorService implements Executor {
     this.registry.register(new EchoTool());
     this.registry.register(new TerminalTool());
     this.registry.register(new FileTool());
+    this.registry.register(new DirectoryTool());
   }
+async execute(plan: Plan): Promise<ExecutionResult> {
+  let outputs: string[] = [];
 
-  async execute(plan: Plan): Promise<ExecutionResult> {
-    const tool = this.registry.get(plan.tool);
-
-    if (plan.tool === "terminal") {
-      const command = String(plan.input.command);
-
-      if (!this.guard.isSafe(command)) {
-        return {
-          success: false,
-          output: "Blocked:Unsafe command detected.",
-        };
-      }
-    }
+  for (const step of plan.steps) {
+    const tool = this.registry.get(step.tool);
 
     if (!tool) {
       return {
         success: false,
-        output: `Tool "${plan.tool}" not found`,
+        output: `Tool "${step.tool}" not found`,
       };
     }
 
-    const result = await tool.execute(plan.input);
+    if (step.tool === "terminal") {
+      const command = String(step.input.command);
 
-    return {
-      success: result.success,
-      output: String(result.data),
-    };
+      if (!this.guard.isSafe(command)) {
+        return {
+          success: false,
+          output: "Blocked: Unsafe command detected.",
+        };
+      }
+    }
+
+    const result = await tool.execute(step.input);
+    
+
+    if (!result.success) {
+      return {
+        success: false,
+        output: String(result.data),
+      };
+    }
+
+    outputs.push(String(result.data));
   }
-}
+
+  return {
+    success: true,
+    output: outputs.join("\n"),
+  };
+}}

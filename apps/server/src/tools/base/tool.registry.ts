@@ -5,6 +5,7 @@ export class ToolRegistry {
 
     register(tool: Tool){
         this.tools.set(tool.name, tool);
+        
     }
 
     get(name:string):Tool | undefined {
