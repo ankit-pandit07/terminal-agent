@@ -6,13 +6,17 @@ import { ConversationMemory } from "./memory.js";
 import { ConversationRepository } from "../repositories/conversation.repository.js";
 import type { Conversation } from "@prisma/client";
 import { SessionState } from "./session.js";
-
+import { AgentState } from "./agent-state.js";
+import { LLMFactory } from "../llm/llm.factory.js";
 export class AgentService {
   private planner = new PlannerService();
   private executor = new ExecutorService();
   private memory = new ConversationMemory();
   private conversationRepository = new ConversationRepository();
   private session = new SessionState();
+  private state = new AgentState();
+  private llm=LLMFactory.create();
+  
 
   private buildContext(history: Conversation[]) {
     return history
@@ -25,18 +29,41 @@ export class AgentService {
   }
 
   async process(request: AgentRequest): Promise<AgentResponse> {
+    this.state.goal = request.message;
     this.memory.add("user", request.message);
     const history = await this.conversationRepository.findRecent(10);
     const context = this.buildContext(history);
-    const plan = await this.planner.createPlan(request.message, context);
-    const result = await this.executor.execute(plan);
-    this.memory.add("assistant", result.output);
-    await this.conversationRepository.create(request.message, result.output);
+    let observation="";
+    for (let i=0; i<5; i++){
+      const plan=await this.planner.createPlan(
+        request.message,
+        context,
+        observation
+      );
+
+      const result= await this.executor.execute(plan);
+
+      if(result.completed){
+        this.memory.add("assistant", result.output);
+
+        await this.conversationRepository.create(
+          request.message,
+          result.output
+        );
+
+        return {
+          success:result.success,
+          response:result.output
+        };
+      }
+
+      observation=result.observation ?? result.output;
+    }
 
     return {
-      success: result.success,
-      response: result.output,
-    };
+      success:false,
+      response:"Maximum reasoing iterations reached."
+    }
   }
   async getHistory() {
     return this.conversationRepository.findAll();

@@ -2,7 +2,8 @@ import { toolDefinitions } from "../tools/definitions/index.js";
 
 export function buildPlannerPrompt(
   history: string,
-  message: string
+  message: string,
+  observation?: string
 ): string {
   const tools = toolDefinitions
     .map(
@@ -11,6 +12,7 @@ Name: ${tool.name}
 
 Description:
 ${tool.description}
+
 
 Examples:
 ${tool.usage.join("\n")}
@@ -34,6 +36,17 @@ You ONLY decide:
 
 Conversation History:
 ${history}
+
+${
+  observation
+    ? `
+Previous Execution Result:
+${observation}
+
+If the previous execution did not complete the user's goal, create the next best plan based on this result.
+`
+    : ""
+}
 
 Available Tools:
 
