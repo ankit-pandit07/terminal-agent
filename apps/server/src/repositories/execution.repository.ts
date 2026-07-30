@@ -52,4 +52,11 @@ export class ExecutionRepository{
             }
         })
     }
+    async deleteByConversation(conversationId:string){
+        return prisma.execution.deleteMany({
+            where:{
+                conversationId,
+            }
+        })
+    }
 }

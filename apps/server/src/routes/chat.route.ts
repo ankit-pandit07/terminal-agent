@@ -18,4 +18,12 @@ router.get("/conversations", async (_, res) => {
     res.json(history);
 });
 
+router.delete("/conversations/:id",async(req,res,next)=>{
+    try{
+        const result=await agent.deleteConversation(req.params.id);
+        res.json(result);
+    }catch(error){
+        next(error);
+    }
+})
 export default router;

@@ -5,7 +5,9 @@ import { PlannerService } from "../planner/planner.service.js";
 
 import type { AgentRequest, AgentResponse } from "./agent.js";
 
-import { ConversationMemory } from "./memory.js";
+import { ToolExecutionRepository } from "../repositories/tool-execution.repository.js";
+
+
 import { ConversationRepository } from "../repositories/conversation.repository.js";
 import { MessageRepository } from "../repositories/message.repository.js";
 import { ExecutionRepository } from "../repositories/execution.repository.js";
@@ -16,7 +18,7 @@ export class AgentService {
   private planner = new PlannerService();
   private executor = new ExecutorService();
 
-  private memory = new ConversationMemory();
+private toolExecutionRepository = new ToolExecutionRepository();
 
   private conversationRepository = new ConversationRepository();
   private messageRepository = new MessageRepository();
@@ -28,15 +30,29 @@ export class AgentService {
 
   async process(request: AgentRequest): Promise<AgentResponse> {
     let execution: { id: string } | null = null;
+  
 
     try {
       this.state.goal = request.message;
-      this.memory.add("user", request.message);
+  
 
       // Create Conversation
-      const conversation = await this.conversationRepository.create(
-        request.message,
-      );
+     let conversation;
+
+if (request.conversationId) {
+  conversation = await this.conversationRepository.findById(
+    request.conversationId,
+  );
+
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+} else {
+  conversation = await this.conversationRepository.create(
+    request.message,
+  );
+}
+      
 
       // Save User Message
       await this.messageRepository.create(
@@ -52,10 +68,13 @@ export class AgentService {
       );
 
       // Build Context
-      const context = this.memory
-        .getHistory()
-        .map((m) => `${m.role}: ${m.content}`)
-        .join("\n");
+    const messages = await this.messageRepository.findByConversation(
+  conversation.id,
+);
+
+const context = messages
+  .map((m) => `${m.role}: ${m.content}`)
+  .join("\n");
 
       let executionHistory = "";
 
@@ -77,8 +96,6 @@ export class AgentService {
             ExecutionStatus.SUCCESS,
           );
 
-          this.memory.add("assistant", result.output);
-
           await this.messageRepository.create(
             conversation.id,
             Role.ASSISTANT,
@@ -88,6 +105,7 @@ export class AgentService {
           return {
             success: result.success,
             response: result.output,
+            conversationId:conversation.id
           };
         }
 
@@ -102,6 +120,7 @@ export class AgentService {
           return {
             success: false,
             response: "Planner returned an empty plan.",
+            conversationId:conversation.id
           };
         }
 
@@ -126,6 +145,7 @@ ${result.output}
       return {
         success: false,
         response: "Maximum reasoning iterations reached.",
+        conversationId:conversation.id
       };
     } catch (error) {
       if (execution) {
@@ -136,6 +156,33 @@ ${result.output}
       }
 
       throw error;
+    }
+  }
+  async deleteConversation(conversationId:string){
+    // find conversation
+    const conversation=await this.conversationRepository.findById(
+      conversationId
+    );
+
+    if(!conversation){
+      throw new Error("Conversation not found")
+    }
+    // delete toolExecutions
+    for(const execution of conversation.executions){
+      await this.toolExecutionRepository.deleteByExecution(execution.id);
+    }
+    // delete executions
+    await this.executionRepository.deleteByConversation(conversationId);
+
+    //delete messages
+    await this.messageRepository.deleteByConversation(conversationId);
+
+    // delete conversation
+    await this.conversationRepository.delete(conversationId)
+
+    return {
+      success:true,
+      message:"Conversation deleted successfully",
     }
   }
 

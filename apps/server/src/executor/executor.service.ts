@@ -75,13 +75,26 @@ export class ExecutorService implements Executor {
 
             await this.fileTool.writeFile(path, updatedContent);
 
+            await this.toolExecutionRepository.create(
+              executionId,
+              "file",
+              JSON.stringify(step.input),
+              `Updated file: ${path}`,
+              true,
+            );
             outputs.push(`Updated file:${path}`);
 
             continue;
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Unknown error";
-
+            await this.toolExecutionRepository.create(
+              executionId,
+              "file",
+              JSON.stringify(step.input),
+              message,
+              false,
+            );
             return this.failure(message);
           }
         }
@@ -108,15 +121,7 @@ export class ExecutorService implements Executor {
         );
 
         if (!result.success) {
-          const message = String(result.data);
-          await this.toolExecutionRepository.create(
-            executionId,
-            step.tool,
-            JSON.stringify(step.input),
-            message,
-            false,
-          );
-          return this.failure(message);
+          return this.failure(String(result.data));
         }
 
         outputs.push(String(result.data));
