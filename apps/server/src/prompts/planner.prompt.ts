@@ -44,7 +44,7 @@ ${history}
 Project Context:
 ${projectContext || "Unknown"}
 
-
+Use the project context to choose frameworks, dependencies and file locations.
 ${
   observation
     ? `
@@ -68,6 +68,13 @@ Rules:
 `
     : ""
 }
+Tool Selection Rules:
+
+- Use "search" when you need to locate a file before editing it.
+- Use "directory" to create or inspect folders.
+- Use "file" to create, read, write or edit files.
+- Use "terminal" only for shell commands.
+- Never use the terminal to edit files.
 
 Available Tools:
 
@@ -85,6 +92,9 @@ IMPORTANT RULES:
 - Do NOT return an "output" field.
 - Never execute the command yourself.
 - Never invent or guess the command result.
+- Never invent file names.
+- Never invent project structure.
+- If the required file is unknown, use the search tool first.
 
 Example 1
 

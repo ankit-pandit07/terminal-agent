@@ -5,21 +5,19 @@ import type { AgentRequest, AgentResponse } from "./agent.js";
 import { ConversationMemory } from "./memory.js";
 import { ConversationRepository } from "../repositories/conversation.repository.js";
 import type { Conversation } from "@prisma/client";
-import { SessionState } from "./session.js";
+
 import { AgentState } from "./agent-state.js";
-import { LLMFactory } from "../llm/llm.factory.js";
+
 export class AgentService {
   private planner = new PlannerService();
   private executor = new ExecutorService();
   private memory = new ConversationMemory();
   private conversationRepository = new ConversationRepository();
-  private session = new SessionState();
+  private readonly MAX_ITERATIONS = 5;
   private state = new AgentState();
-  private llm=LLMFactory.create();
-  
 
   private buildContext(history: Conversation[]) {
-    return history
+    return [...history]
       .reverse()
       .map(
         (c) => `User:${c.message}
@@ -34,36 +32,41 @@ export class AgentService {
     const history = await this.conversationRepository.findRecent(10);
     const context = this.buildContext(history);
     let executionHistory = "";
-    for (let i=0; i<5; i++){
-      const plan=await this.planner.createPlan(
+    for (let i = 0; i < this.MAX_ITERATIONS; i++) {
+      const plan = await this.planner.createPlan(
         request.message,
         context,
-        executionHistory
+        executionHistory,
       );
 
-      const result= await this.executor.execute(plan);
+      const result = await this.executor.execute(plan);
 
-      if(result.completed){
+      if (result.completed) {
         this.memory.add("assistant", result.output);
 
         await this.conversationRepository.create(
           request.message,
-          result.output
+          result.output,
         );
 
         return {
-          success:result.success,
-          response:result.output
+          success: result.success,
+          response: result.output,
         };
       }
 
       const step = plan.steps[0];
-
-executionHistory += `
-Tool: ${step?.tool}
+      if (!step) {
+        return {
+          success: false,
+          response: "Planner returned an empty plan.",
+        };
+      }
+      executionHistory += `
+Tool: ${step.tool}
 
 Input:
-${JSON.stringify(step?.input, null, 2)}
+${JSON.stringify(step.input, null, 2)}
 
 Result:
 ${result.output}
@@ -73,9 +76,9 @@ ${result.output}
     }
 
     return {
-      success:false,
-      response:"Maximum reasoing iterations reached."
-    }
+      success: false,
+      response: "Maximum reasoning iterations reached.",
+    };
   }
   async getHistory() {
     return this.conversationRepository.findAll();

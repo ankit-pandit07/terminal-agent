@@ -30,8 +30,23 @@ export class ExecutorService implements Executor {
     this.registry.register(new SearchTool(this.session));
   
   }
+
+  private failure(message: string): ExecutionResult {
+  return {
+    success: false,
+    output: message,
+    observation: message,
+    completed: false,
+  };
+}
+
   async execute(plan: Plan): Promise<ExecutionResult> {
-    let outputs: string[] = [];
+    try{
+      if (plan.steps.length === 0) {
+  return this.failure("Planner returned an empty execution plan.");
+}
+
+      let outputs: string[] = [];
 
     for (const step of plan.steps) {
       const tool = this.registry.get(step.tool);
@@ -52,12 +67,7 @@ export class ExecutorService implements Executor {
             updatedContent.trim().startsWith("{") ||
             updatedContent.includes("__rules__")
           ) {
-            return {
-              success: false,
-              output: "Editor returned JSON instead of source code.",
-                observation: "Editor returned JSON instead of source code.",
-              completed:false
-            };
+           return this.failure("Editor returned JSON instead of source code.");
           }
 
           await this.fileTool.writeFile(path, updatedContent);
@@ -69,34 +79,19 @@ export class ExecutorService implements Executor {
   const message =
     error instanceof Error ? error.message : "Unknown error";
 
-  return {
-    success: false,
-    output: message,
-    observation: message,
-    completed: false,
-  };
+return this.failure(message);
 }
       }
       if (!tool) {
         const message = `Tool "${step.tool}" not found`;
-        return {
-          success: false,
-          output: message,
-            observation: message,
-          completed:false
-        };
+        return this.failure(message);
       }
 
       if (step.tool === "terminal") {
         const command = String(step.input.command);
 
         if (!this.guard.isSafe(command)) {
-          return {
-            success: false,
-            output: "Blocked: Unsafe command detected.",
-             observation: "Blocked: Unsafe command detected.",
-            completed:false
-          };
+          return this.failure("Blocked: Unsafe command detected.");
         }
       }
 
@@ -105,12 +100,7 @@ export class ExecutorService implements Executor {
     if (!result.success) {
   const message = String(result.data);
 
-  return {
-    success: false,
-    output: message,
-    observation: message,
-    completed: false,
-  };
+  return this.failure(message);
 }
 
       outputs.push(String(result.data));
@@ -121,5 +111,9 @@ export class ExecutorService implements Executor {
   output: outputs.join("\n"),
   completed: true,
 };
+  }catch(error){
+    const message=error instanceof Error ? error.message : "Unknown error";
+    return this.failure(message);
   }
+}
 }

@@ -1,11 +1,10 @@
 import { prisma } from "../../db/prisma.js";
 
 export class ConversationRepository{
-    async create(message:string, response:string){
+    async create(title:string){
         return prisma.conversation.create({
             data:{
-                message,
-                response,
+                title,
             }
         })
     }
@@ -13,7 +12,7 @@ export class ConversationRepository{
     async findAll(){
         return prisma.conversation.findMany({
             orderBy:{
-                createdAt:"desc",
+                updatedAt:"desc",
             }
         });
     }
@@ -21,7 +20,25 @@ export class ConversationRepository{
         return prisma.conversation.findUnique({
             where:{
                 id,
+            },
+            include: {
+                messages:{
+                    orderBy:{
+                        createdAt:"asc"
+                    }
+                },
+                executions:{
+                    orderBy:{
+                        startedAt:"desc"
+                    }
+                }
             }
+        })
+    }
+
+    async delete(id:string){
+        return prisma.conversation.delete({
+            where:{id},
         })
     }
     async findRecent(limit=10){
