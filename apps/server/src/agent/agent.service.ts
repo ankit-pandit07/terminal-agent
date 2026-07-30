@@ -185,7 +185,25 @@ ${result.output}
       message:"Conversation deleted successfully",
     }
   }
+async getConversation(conversationId:string){
+  const conversation=await this.conversationRepository.findById(conversationId);
 
+  if(!conversation){
+    throw new Error("Conversation not found");
+  }
+  return conversation;
+}
+
+async getExecutions(conversationId:string){
+  const conversation=await this.conversationRepository.findById(
+    conversationId,
+  );
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+
+  return this.executionRepository.findByConversation(conversationId);
+}
   async getHistory() {
     return this.conversationRepository.findAll();
   }

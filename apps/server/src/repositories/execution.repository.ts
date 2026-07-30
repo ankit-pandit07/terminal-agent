@@ -47,6 +47,13 @@ export class ExecutionRepository{
             where:{
                 conversationId,
             },
+            include:{
+                toolExecutions:{
+                    orderBy:{
+                        createdAt:"asc"
+                    }
+                }
+            },
             orderBy:{
                 startedAt:"desc"
             }
