@@ -7,6 +7,7 @@ import { PlanValidator } from "../planner/plan-validator.js";
 import type { AgentRequest, AgentResponse } from "./agent.js";
 
 import { ToolExecutionRepository } from "../repositories/tool-execution.repository.js";
+import { ContextService } from "../context/context.service.js";
 
 import { ConversationRepository } from "../repositories/conversation.repository.js";
 import { MessageRepository } from "../repositories/message.repository.js";
@@ -22,6 +23,7 @@ export class AgentService {
   private toolExecutionRepository = new ToolExecutionRepository();
   private validator = new PlanValidator();
 private emitter?: AgentEventEmitter;
+private contextService = new ContextService();
   private conversationRepository = new ConversationRepository();
   private messageRepository = new MessageRepository();
   private executionRepository = new ExecutionRepository();
@@ -67,12 +69,9 @@ private emitter?: AgentEventEmitter;
       );
 
       // Build Context
-      const messages = await this.messageRepository.findByConversation(
-        conversation.id,
-      );
-
-      const context = messages.map((m) => `${m.role}: ${m.content}`).join("\n");
-
+     const context = await this.contextService.buildContext(
+  conversation.id,
+);
       let executionHistory = "";
 
       for (let i = 0; i < this.MAX_ITERATIONS; i++) {
