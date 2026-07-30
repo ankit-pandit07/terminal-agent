@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { AgentService } from "../agent/agent.service.js";
+import { AgentEventEmitter } from "../events/agent-event-emitter.js";
+
 
 const router = Router();
 
@@ -38,7 +40,7 @@ router.get("/conversations/:id", async (req, res, next) => {
 
 router.get("/executions/:conversationId",async(req,res,next)=>{
     try{
-        const executions=await agent.getConversation(
+        const executions=await agent.getExecutions(
             req.params.conversationId,
         );
         res.json(executions);
@@ -46,4 +48,41 @@ router.get("/executions/:conversationId",async(req,res,next)=>{
         next(error);
     }
 })
+router.post("/stream", async (req, res, next) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  res.flushHeaders();
+
+  const emitter = new AgentEventEmitter();
+
+  emitter.on("event", (event) => {
+    res.write(`event: ${event.type}\n`);
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  });
+
+  try {
+    const result = await agent.process(
+      {
+        message: req.body.message,
+        conversationId: req.body.conversationId,
+      },
+      emitter,
+    );
+
+    res.write(`event: done\n`);
+    res.write(`data: ${JSON.stringify(result)}\n\n`);
+
+    res.end();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+
+    res.write(`event: error\n`);
+    res.write(`data: ${JSON.stringify({ message })}\n\n`);
+
+    res.end();
+  }
+});
 export default router;

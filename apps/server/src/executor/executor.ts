@@ -1,3 +1,4 @@
+import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import type{ Plan } from "../planner/planner.js";
 
 export interface ExecutionResult{
@@ -8,5 +9,5 @@ export interface ExecutionResult{
 }
 
 export interface Executor{
-    execute(executionId: string,plan:Plan):Promise<ExecutionResult>
+    execute(executionId: string,plan:Plan,emitter?: AgentEventEmitter):Promise<ExecutionResult>
 }

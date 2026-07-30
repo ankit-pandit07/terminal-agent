@@ -10,6 +10,7 @@ import { EditorService } from "../editor/editor.service.js";
 import { SessionState } from "../session/session.state.js";
 import { SearchTool } from "../tools/search/search.tool.js";
 import { ToolExecutionRepository } from "../repositories/tool-execution.repository.js";
+import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -41,7 +42,11 @@ export class ExecutorService implements Executor {
     };
   }
 
-  async execute(executionId: string, plan: Plan): Promise<ExecutionResult> {
+  async execute(
+    executionId: string,
+    plan: Plan,
+        emitter?: AgentEventEmitter,
+  ): Promise<ExecutionResult> {
     try {
       if (plan.steps.length === 0) {
         return this.failure("Planner returned an empty execution plan.");
@@ -50,6 +55,10 @@ export class ExecutorService implements Executor {
       let outputs: string[] = [];
 
       for (const step of plan.steps) {
+        emitter?.emit("event", {
+          type: "tool-start",
+          tool: step.tool,
+        });
         const tool = this.registry.get(step.tool);
 
         if (step.tool === "file" && step.input.action === "edit") {
@@ -74,7 +83,11 @@ export class ExecutorService implements Executor {
             }
 
             await this.fileTool.writeFile(path, updatedContent);
-
+            emitter?.emit("event", {
+              type: "tool-complete",
+              tool: "file",
+              success: true,
+            });
             await this.toolExecutionRepository.create(
               executionId,
               "file",
@@ -98,6 +111,11 @@ export class ExecutorService implements Executor {
             return this.failure(message);
           }
         }
+        emitter?.emit("event", {
+          type: "tool-complete",
+          tool: step.tool,
+          success: false,
+        });
         if (!tool) {
           const message = `Tool "${step.tool}" not found`;
           return this.failure(message);
@@ -105,13 +123,22 @@ export class ExecutorService implements Executor {
 
         if (step.tool === "terminal") {
           const command = String(step.input.command);
-
+          emitter?.emit("event", {
+            type: "tool-complete",
+            tool: "terminal",
+            success: false,
+          });
           if (!this.guard.isSafe(command)) {
             return this.failure("Blocked: Unsafe command detected.");
           }
         }
 
         const result = await tool.execute(step.input);
+        emitter?.emit("event", {
+          type: "tool-complete",
+          tool: step.tool,
+          success: result.success,
+        });
         await this.toolExecutionRepository.create(
           executionId,
           step.tool,
@@ -133,6 +160,11 @@ export class ExecutorService implements Executor {
         completed: true,
       };
     } catch (error) {
+      emitter?.emit("event", {
+        type: "tool-complete",
+        tool: "file",
+        success: false,
+      });
       const message = error instanceof Error ? error.message : "Unknown error";
       return this.failure(message);
     }
