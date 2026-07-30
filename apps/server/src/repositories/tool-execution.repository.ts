@@ -22,7 +22,7 @@ export class ToolExecutionRepository{
     async findFailed(){
         return prisma.toolExecution.findMany({
             where:{
-                success:true
+                success:false
             },
             orderBy:{
                 createdAt:"desc"

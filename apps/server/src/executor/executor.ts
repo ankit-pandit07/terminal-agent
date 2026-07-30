@@ -8,5 +8,5 @@ export interface ExecutionResult{
 }
 
 export interface Executor{
-    execute(plan:Plan):Promise<ExecutionResult>
+    execute(executionId: string,plan:Plan):Promise<ExecutionResult>
 }
