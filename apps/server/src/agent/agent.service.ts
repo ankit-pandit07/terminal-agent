@@ -13,8 +13,9 @@ import { ConversationRepository } from "../repositories/conversation.repository.
 import { MessageRepository } from "../repositories/message.repository.js";
 import { ExecutionRepository } from "../repositories/execution.repository.js";
 
-import { AgentState } from "./agent-state.js";
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
+import { WorkspaceService } from "../workspace/workspace.service.js";
+import type { Observation } from "../observation/observation.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -22,22 +23,21 @@ export class AgentService {
 
   private toolExecutionRepository = new ToolExecutionRepository();
   private validator = new PlanValidator();
-private emitter?: AgentEventEmitter;
-private contextService = new ContextService();
+
+  private contextService = new ContextService();
   private conversationRepository = new ConversationRepository();
   private messageRepository = new MessageRepository();
   private executionRepository = new ExecutionRepository();
-
+  private workspaceService = new WorkspaceService();
   private readonly MAX_ITERATIONS = 5;
 
-  private state = new AgentState();
-
-  async process(request: AgentRequest,emitter?: AgentEventEmitter): Promise<AgentResponse> {
+  async process(
+    request: AgentRequest,
+    emitter?: AgentEventEmitter,
+  ): Promise<AgentResponse> {
     let execution: { id: string } | null = null;
 
     try {
-      this.state.goal = request.message;
-
       // Create Conversation
       let conversation;
 
@@ -69,33 +69,33 @@ private contextService = new ContextService();
       );
 
       // Build Context
-     const context = await this.contextService.buildContext(
-  conversation.id,
-);
-      let executionHistory = "";
+      const context = await this.contextService.buildContext(conversation.id);
 
+      const workspace = await this.workspaceService.analyze();
+
+      let executionHistory = "";
       for (let i = 0; i < this.MAX_ITERATIONS; i++) {
-          emitter?.emit("event", {
-      type: "planning",
-      message: `Planning iteration ${i + 1}...`,
-    });
-        const plan = await this.planner.createPlan(
-          request.message,
-          context,
-          executionHistory,
-        );
-        this.validator.validate(plan);
-emitter?.emit("event", {
-    type: "plan-created",
-    steps: plan.steps.length,
+        this.emit(emitter, {
+          type: "planning",
+          message: `Planning iteration ${i + 1}...`,
+        });
+       const plan = await this.planner.createPlan(
+ request.message,
+    context,
+    workspace,
+    executionHistory,
+)
+       this.emit(emitter,{
+    type:"plan-created",
+    steps:plan.steps.length,
 });
-        const result = await this.executor.execute(execution.id, plan,emitter);
+        const result = await this.executor.execute(execution.id, plan, emitter);
 
         if (result.completed) {
-            emitter?.emit("event", {
-        type: "completed",
-        response: result.output,
-    });
+          this.emit(emitter, {
+            type: "completed",
+            response: result.output,
+          });
           await this.executionRepository.updateStatus(
             execution.id,
             ExecutionStatus.SUCCESS,
@@ -128,18 +128,10 @@ emitter?.emit("event", {
             conversationId: conversation.id,
           };
         }
-
-        executionHistory += `
-Tool: ${step.tool}
-
-Input:
-${JSON.stringify(step.input, null, 2)}
-
-Result:
-${result.output}
-
-------------------------
-`;
+        executionHistory = this.appendObservation(
+    executionHistory,
+    result.observation,
+);
       }
 
       await this.executionRepository.updateStatus(
@@ -153,13 +145,10 @@ ${result.output}
         conversationId: conversation.id,
       };
     } catch (error) {
-       emitter?.emit("event",{
-        type:"error",
-        message:
-            error instanceof Error
-                ? error.message
-                : "Unknown error"
-    });
+      this.emit(emitter, {
+        type: "error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
       if (execution) {
         await this.executionRepository.updateStatus(
           execution.id,
@@ -218,4 +207,37 @@ ${result.output}
   async getHistory() {
     return this.conversationRepository.findAll();
   }
+  private emit(
+    emitter: AgentEventEmitter | undefined,
+    event: Parameters<AgentEventEmitter["emit"]>[1],
+  ) {
+    emitter?.emit("event", event);
+  }
+
+  private appendObservation(
+  history: string,
+  observation: Observation,
+): string {
+  return (
+    history +
+    `
+Tool:
+${observation.tool}
+
+Category:
+${observation.category}
+
+Summary:
+${observation.summary}
+
+Facts:
+${observation.facts.join("\n")}
+
+Errors:
+${observation.errors.join("\n")}
+
+-----------------------------------
+`
+  );
+}
 }

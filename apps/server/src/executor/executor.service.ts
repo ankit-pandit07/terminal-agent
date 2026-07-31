@@ -11,6 +11,7 @@ import { SessionState } from "../session/session.state.js";
 import { SearchTool } from "../tools/search/search.tool.js";
 import { ToolExecutionRepository } from "../repositories/tool-execution.repository.js";
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
+import { ObservationService } from "../observation/observation.service.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -22,6 +23,7 @@ export class ExecutorService implements Executor {
   private directoryTool = new DirectoryTool(this.session);
   private editor = new EditorService();
   private terminalTool = new TerminalTool(this.session);
+private observationService = new ObservationService();
 
   private toolExecutionRepository = new ToolExecutionRepository();
 
@@ -33,12 +35,16 @@ export class ExecutorService implements Executor {
     this.registry.register(new SearchTool(this.session));
   }
 
-  private failure(message: string): ExecutionResult {
+  private failure(tool:string,message: string): ExecutionResult {
     return {
       success: false,
       output: message,
-      observation: message,
       completed: false,
+      observation: this.observationService.create(
+      tool,
+      false,
+      message,
+    ),
     };
   }
 
@@ -49,7 +55,7 @@ export class ExecutorService implements Executor {
   ): Promise<ExecutionResult> {
     try {
       if (plan.steps.length === 0) {
-        return this.failure("Planner returned an empty execution plan.");
+        return this.failure("planner","Planner returned an empty execution plan.");
       }
 
       let outputs: string[] = [];
@@ -78,6 +84,7 @@ export class ExecutorService implements Executor {
               updatedContent.includes("__rules__")
             ) {
               return this.failure(
+                "file",
                 "Editor returned JSON instead of source code.",
               );
             }
@@ -108,7 +115,7 @@ export class ExecutorService implements Executor {
               message,
               false,
             );
-            return this.failure(message);
+            return this.failure(step.tool,message);
           }
         }
         emitter?.emit("event", {
@@ -118,7 +125,7 @@ export class ExecutorService implements Executor {
         });
         if (!tool) {
           const message = `Tool "${step.tool}" not found`;
-          return this.failure(message);
+          return this.failure(step.tool,message);
         }
 
         if (step.tool === "terminal") {
@@ -129,7 +136,9 @@ export class ExecutorService implements Executor {
             success: false,
           });
           if (!this.guard.isSafe(command)) {
-            return this.failure("Blocked: Unsafe command detected.");
+            return this.failure(
+              "terminal",
+              "Blocked: Unsafe command detected.");
           }
         }
 
@@ -148,16 +157,24 @@ export class ExecutorService implements Executor {
         );
 
         if (!result.success) {
-          return this.failure(String(result.data));
+          return this.failure(
+            step.tool,
+            String(result.data));
         }
 
         outputs.push(String(result.data));
       }
-
+const output=outputs.join("\n")
       return {
         success: true,
         output: outputs.join("\n"),
         completed: true,
+
+        observation:this.observationService.create(
+        "executor",
+        true,
+        output,
+    )
       };
     } catch (error) {
       emitter?.emit("event", {
@@ -166,7 +183,7 @@ export class ExecutorService implements Executor {
         success: false,
       });
       const message = error instanceof Error ? error.message : "Unknown error";
-      return this.failure(message);
+      return this.failure("unknown",message);
     }
   }
 }

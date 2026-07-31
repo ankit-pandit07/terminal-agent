@@ -1,7 +1,7 @@
 import type { WorkspaceInfo } from "./workspace.types.js";
 
 export class WorkspaceCache {
-  private workspace?: WorkspaceInfo;
+  private workspace?: WorkspaceInfo | undefined;
 
   get(): WorkspaceInfo | undefined {
     return this.workspace;
