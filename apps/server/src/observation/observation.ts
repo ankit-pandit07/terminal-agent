@@ -1,7 +1,9 @@
-export interface Observation {
-    success: boolean;
+export type ObservationSeverity = "info" | "warning" | "error";
 
-    tool:string;
+export interface Observation {
+  success: boolean;
+
+  tool: string;
 
   category:
     | "terminal"
@@ -9,10 +11,15 @@ export interface Observation {
     | "directory"
     | "search"
     | "echo"
+    | "planner"
+    | "executor"
     | "unknown";
 
-    summary:string;
-    facts:string[];
-    errors:string[];
-    timestamp:Date;
+  summary: string;
+  facts: string[];
+  errors: string[];
+  timestamp: Date;
+  severity: ObservationSeverity;
+  recoverable: boolean;
+  suggestion?: string;
 }

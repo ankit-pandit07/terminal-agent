@@ -1,7 +1,11 @@
-import type { Observation } from "./observation.js";
+import type { Observation, ObservationSeverity } from "./observation.js";
 
 export class ObservationService {
   create(tool: string, success: boolean, output: string): Observation {
+    const severity = this.detectSeverity(success);
+    const recoverable = this.isRecoverable(output);
+    const suggestion = this.buildSuggestion(output);
+
     return {
       success,
       tool,
@@ -10,7 +14,10 @@ export class ObservationService {
       facts: success ? [output] : [],
       errors: success ? [] : [output],
       timestamp: new Date(),
-    };
+      severity,
+      recoverable,
+      suggestion,
+    } as Observation;
   }
   private buildSummary(success: boolean, output: string): string {
     if (success) {
@@ -26,10 +33,53 @@ export class ObservationService {
       case "directory":
       case "search":
       case "echo":
+      case "planner":
+      case "executor":
         return tool;
 
       default:
         return "unknown";
     }
+  }
+
+  private detectSeverity(success: boolean): ObservationSeverity {
+    if (success) {
+      return "info";
+    }
+    return "error";
+  }
+
+  private isRecoverable(output: string): boolean {
+    const text = output.toLowerCase();
+
+    return (
+      text.includes("not found") ||
+      text.includes("enoent") ||
+      text.includes("permission denied") ||
+      text.includes("already exists") ||
+      text.includes("timeout") 
+    );
+  }
+
+  private buildSuggestion(output: string): string | undefined {
+    const text = output.toLowerCase();
+
+    if (text.includes("package.json")) {
+      return "Search for package.json before runnig  npm commands.";
+    }
+
+    if (text.includes("not found")) {
+      return "Use the Search Tool tolocate the required file.";
+    }
+
+    if (text.includes("permission")) {
+      return "Verify file permissions before retrying.";
+    }
+    
+    if(text.includes("already exists")){
+      return "Check whether the file or resource already exists before creating it again.";
+    }
+
+    return undefined;
   }
 }

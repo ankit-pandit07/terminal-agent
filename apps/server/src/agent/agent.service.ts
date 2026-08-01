@@ -17,6 +17,8 @@ import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
 import type { Observation } from "../observation/observation.js";
 import { VerificationService } from "../verification/verification.service.js";
+import type { ExecutionResult } from "../executor/executor.js";
+import type { Plan } from "../planner/planner.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -24,7 +26,7 @@ export class AgentService {
 
   private toolExecutionRepository = new ToolExecutionRepository();
   private validator = new PlanValidator();
-private verifier = new VerificationService();
+  private verifier = new VerificationService();
 
   private contextService = new ContextService();
   private conversationRepository = new ConversationRepository();
@@ -81,6 +83,7 @@ private verifier = new VerificationService();
           type: "planning",
           message: `Planning iteration ${i + 1}...`,
         });
+
         const plan = await this.planner.createPlan(
           request.message,
           context,
@@ -92,58 +95,40 @@ private verifier = new VerificationService();
           steps: plan.steps.length,
         });
         const result = await this.executor.execute(execution.id, plan, emitter);
-    
+
+        const verification = this.verify(plan, result.observation);
+
+        console.log("Verification:", verification);
+
         if (result.completed) {
           this.emit(emitter, {
             type: "completed",
             response: result.output,
           });
-          await this.executionRepository.updateStatus(
-            execution.id,
-            ExecutionStatus.SUCCESS,
-          );
 
-          await this.messageRepository.create(
+          return this.finishExecution(execution.id, conversation.id, result);
+        }
+
+        if (plan.steps.length === 0) {
+          return this.failExecution(
+            execution.id,
             conversation.id,
-            Role.ASSISTANT,
-            result.output,
+            "Planner returned an empty plan.",
           );
-
-          return {
-            success: result.success,
-            response: result.output,
-            conversationId: conversation.id,
-          };
         }
 
-        if (plan.steps.length) {
-          await this.executionRepository.updateStatus(
-            execution.id,
-            ExecutionStatus.FAILED,
-          );
-
-          return {
-            success: false,
-            response: "Planner returned an empty plan.",
-            conversationId: conversation.id,
-          };
-        }
         executionHistory = this.appendObservation(
           executionHistory,
           result.observation,
         );
       }
 
-      await this.executionRepository.updateStatus(
+      // mif we've exhausated all iteratinos without success
+      return this.failExecution(
         execution.id,
-        ExecutionStatus.FAILED,
+        conversation.id,
+        `Maximum iterations (${this.MAX_ITERATIONS}) reached without completing the task.`,
       );
-
-      return {
-        success: false,
-        response: "Maximum reasoning iterations reached.",
-        conversationId: conversation.id,
-      };
     } catch (error) {
       this.emit(emitter, {
         type: "error",
@@ -236,5 +221,47 @@ ${observation.errors.join("\n")}
 -----------------------------------
 `
     );
+  }
+
+  private verify(plan: Plan, observation: Observation) {
+    return this.verifier.verify(plan, observation);
+  }
+  private async finishExecution(
+    executionId: string,
+    conversationId: string,
+    result: ExecutionResult,
+  ): Promise<AgentResponse> {
+    await this.executionRepository.updateStatus(
+      executionId,
+      ExecutionStatus.SUCCESS,
+    );
+
+    await this.messageRepository.create(
+      conversationId,
+      Role.ASSISTANT,
+      result.output,
+    );
+
+    return {
+      success: result.success,
+      response: result.output,
+      conversationId,
+    };
+  }
+  private async failExecution(
+    executionId: string,
+    conversationId: string,
+    message: string,
+  ): Promise<AgentResponse> {
+    await this.executionRepository.updateStatus(
+      executionId,
+      ExecutionStatus.FAILED,
+    );
+
+    return {
+      success: false,
+      response: message,
+      conversationId,
+    };
   }
 }
