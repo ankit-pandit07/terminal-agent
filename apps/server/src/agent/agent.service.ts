@@ -16,6 +16,7 @@ import { ExecutionRepository } from "../repositories/execution.repository.js";
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
 import type { Observation } from "../observation/observation.js";
+import { VerificationService } from "../verification/verification.service.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -23,6 +24,7 @@ export class AgentService {
 
   private toolExecutionRepository = new ToolExecutionRepository();
   private validator = new PlanValidator();
+private verifier = new VerificationService();
 
   private contextService = new ContextService();
   private conversationRepository = new ConversationRepository();
@@ -79,18 +81,18 @@ export class AgentService {
           type: "planning",
           message: `Planning iteration ${i + 1}...`,
         });
-       const plan = await this.planner.createPlan(
- request.message,
-    context,
-    workspace,
-    executionHistory,
-)
-       this.emit(emitter,{
-    type:"plan-created",
-    steps:plan.steps.length,
-});
+        const plan = await this.planner.createPlan(
+          request.message,
+          context,
+          workspace,
+          executionHistory,
+        );
+        this.emit(emitter, {
+          type: "plan-created",
+          steps: plan.steps.length,
+        });
         const result = await this.executor.execute(execution.id, plan, emitter);
-
+    
         if (result.completed) {
           this.emit(emitter, {
             type: "completed",
@@ -114,9 +116,7 @@ export class AgentService {
           };
         }
 
-        const step = plan.steps[0];
-
-        if (!step) {
+        if (plan.steps.length) {
           await this.executionRepository.updateStatus(
             execution.id,
             ExecutionStatus.FAILED,
@@ -129,9 +129,9 @@ export class AgentService {
           };
         }
         executionHistory = this.appendObservation(
-    executionHistory,
-    result.observation,
-);
+          executionHistory,
+          result.observation,
+        );
       }
 
       await this.executionRepository.updateStatus(
@@ -214,13 +214,10 @@ export class AgentService {
     emitter?.emit("event", event);
   }
 
-  private appendObservation(
-  history: string,
-  observation: Observation,
-): string {
-  return (
-    history +
-    `
+  private appendObservation(history: string, observation: Observation): string {
+    return (
+      history +
+      `
 Tool:
 ${observation.tool}
 
@@ -238,6 +235,6 @@ ${observation.errors.join("\n")}
 
 -----------------------------------
 `
-  );
-}
+    );
+  }
 }
