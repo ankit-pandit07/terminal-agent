@@ -15,10 +15,12 @@ import { ExecutionRepository } from "../repositories/execution.repository.js";
 
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
-import type { Observation } from "../observation/observation.js";
+
 import { VerificationService } from "../verification/verification.service.js";
 import type { ExecutionResult } from "../executor/executor.js";
 import type { Plan } from "../planner/planner.js";
+import type { VerificationResult } from "../verification/verification.types.js";
+import type { Observation } from "../observation/observation.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -97,9 +99,21 @@ export class AgentService {
         const result = await this.executor.execute(execution.id, plan, emitter);
 
         const verification = this.verify(plan, result.observation);
+        const retry = this.shouldRetry(verification, result.observation, i);
 
-        console.log("Verification:", verification);
+        this.emit(emitter, {
+          type: "verification",
+          verification,
+          retry,
+        });
+        if (retry) {
+          executionHistory = this.appendObservation(
+            executionHistory,
+            result.observation,
+          );
 
+          continue;
+        }
         if (result.completed) {
           this.emit(emitter, {
             type: "completed",
@@ -263,5 +277,32 @@ ${observation.errors.join("\n")}
       response: message,
       conversationId,
     };
+  }
+  private shouldRetry(
+    verification: VerificationResult,
+    observation: Observation,
+    retryCount: number,
+  ): boolean {
+    // Retry limit reached
+    if (retryCount >= this.MAX_ITERATIONS - 1) {
+      return false;
+    }
+
+    // Execution successful
+    if (verification.status === "completed") {
+      return false;
+    }
+
+    // Recoverable failure
+    if (verification.status === "failed" && observation.recoverable) {
+      return true;
+    }
+
+    // Planner needs another iteration
+    if (verification.status === "continue") {
+      return true;
+    }
+
+    return false;
   }
 }

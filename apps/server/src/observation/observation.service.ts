@@ -1,7 +1,9 @@
-import type { Observation, ObservationSeverity } from "./observation.js";
+import type { ToolMetadata } from "../tools/base/tool.interface.js";
+import type { ObservationSeverity } from "./observation.js";
+import type { Observation } from "./observation.js";
 
 export class ObservationService {
-  create(tool: string, success: boolean, output: string): Observation {
+  create(tool: string, success: boolean, output: string, metadata?: ToolMetadata): Observation {
     const severity = this.detectSeverity(success);
     const recoverable = this.isRecoverable(output);
     const suggestion = this.buildSuggestion(output);
@@ -19,6 +21,7 @@ export class ObservationService {
       suggestion,
     } as Observation;
   }
+
   private buildSummary(success: boolean, output: string): string {
     if (success) {
       return output;
@@ -35,7 +38,7 @@ export class ObservationService {
       case "echo":
       case "planner":
       case "executor":
-        return tool;
+        return tool as Observation["category"];
 
       default:
         return "unknown";
@@ -57,7 +60,7 @@ export class ObservationService {
       text.includes("enoent") ||
       text.includes("permission denied") ||
       text.includes("already exists") ||
-      text.includes("timeout") 
+      text.includes("timeout")
     );
   }
 
@@ -65,18 +68,18 @@ export class ObservationService {
     const text = output.toLowerCase();
 
     if (text.includes("package.json")) {
-      return "Search for package.json before runnig  npm commands.";
+      return "Search for package.json before running npm commands.";
     }
 
     if (text.includes("not found")) {
-      return "Use the Search Tool tolocate the required file.";
+      return "Use the Search Tool to locate the required file.";
     }
 
     if (text.includes("permission")) {
       return "Verify file permissions before retrying.";
     }
-    
-    if(text.includes("already exists")){
+
+    if (text.includes("already exists")) {
       return "Check whether the file or resource already exists before creating it again.";
     }
 

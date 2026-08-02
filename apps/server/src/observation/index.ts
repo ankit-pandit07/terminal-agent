@@ -1,2 +1,2 @@
 export * from "./observation.js";
-export * from "./observation.service.js";
+export { ObservationService } from "./observation.service.js";

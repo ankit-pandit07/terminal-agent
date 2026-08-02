@@ -12,6 +12,7 @@ import { SearchTool } from "../tools/search/search.tool.js";
 import { ToolExecutionRepository } from "../repositories/tool-execution.repository.js";
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { ObservationService } from "../observation/observation.service.js";
+import type { ToolMetadata } from "../tools/base/tool.interface.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -35,15 +36,16 @@ private observationService = new ObservationService();
     this.registry.register(new SearchTool(this.session));
   }
 
-  private failure(tool:string,message: string): ExecutionResult {
+  private failure(tool:string,message: string,metadata?: ToolMetadata): ExecutionResult {
     return {
       success: false,
       output: message,
       completed: false,
       observation: this.observationService.create(
-      tool,
-      false,
-      message,
+     tool,
+    false,
+    message,
+    metadata,
     ),
     };
   }
@@ -118,13 +120,14 @@ private observationService = new ObservationService();
             return this.failure(step.tool,message);
           }
         }
-        emitter?.emit("event", {
+        
+        if (!tool) {
+          const message = `Tool "${step.tool}" not found`;
+          emitter?.emit("event", {
           type: "tool-complete",
           tool: step.tool,
           success: false,
         });
-        if (!tool) {
-          const message = `Tool "${step.tool}" not found`;
           return this.failure(step.tool,message);
         }
 
@@ -159,7 +162,9 @@ private observationService = new ObservationService();
         if (!result.success) {
           return this.failure(
             step.tool,
-            String(result.data));
+            String(result.data),
+            result.metadata
+          );
         }
 
         outputs.push(String(result.data));
@@ -173,7 +178,7 @@ const output=outputs.join("\n")
         observation:this.observationService.create(
         "executor",
         true,
-        output,
+        output
     )
       };
     } catch (error) {
