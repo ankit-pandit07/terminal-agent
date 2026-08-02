@@ -80,6 +80,7 @@ export class AgentService {
       const workspace = await this.workspaceService.analyze();
 
       let executionHistory = "";
+      let lastObservation: Observation | undefined;
       for (let i = 0; i < this.MAX_ITERATIONS; i++) {
         this.emit(emitter, {
           type: "planning",
@@ -90,13 +91,14 @@ export class AgentService {
           request.message,
           context,
           workspace,
-          executionHistory,
+          lastObservation
         );
         this.emit(emitter, {
           type: "plan-created",
           steps: plan.steps.length,
         });
         const result = await this.executor.execute(execution.id, plan, emitter);
+         lastObservation = result.observation;
 
         const verification = this.verify(plan, result.observation);
         const retry = this.shouldRetry(verification, result.observation, i);

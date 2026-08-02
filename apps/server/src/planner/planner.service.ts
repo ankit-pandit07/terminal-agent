@@ -4,6 +4,7 @@ import { JsonParser } from "../parser/json.parser.js";
 import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
 
 import type { WorkspaceInfo } from "../workspace/workspace.types.js";
+import type { Observation } from "../observation/observation.js";
 
 export class PlannerService {
   private llm = LLMFactory.create();
@@ -39,7 +40,7 @@ ${Object.entries(workspace.scripts)
     message: string,
     history: string,
     workspace: WorkspaceInfo,
-    observation?: string,
+    observation?: Observation,
   ): Promise<Plan> {
     const projectContext = this.buildProjectContext(workspace);
 

@@ -1,11 +1,55 @@
+import type { Observation } from "../observation/observation.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
+
+function formatObservation(
+  observation?: Observation,
+): string {
+  if (observation === undefined) {
+    return "No previous execution.";
+  }
+
+  return `
+Last Tool:
+${observation.tool}
+
+Category:
+${observation.category}
+
+Success:
+${observation.success}
+
+Summary:
+${observation.summary}
+
+Recoverable:
+${observation.recoverable}
+
+Suggestion:
+${observation.suggestion ?? "None"}
+
+Severity:
+${observation.severity}
+
+Metadata:
+${JSON.stringify(observation.metadata ?? {}, null, 2)}
+
+Errors:
+${observation.errors.join("\n")}
+
+Facts:
+${observation.facts.join("\n")}
+`;
+}
 
 export function buildPlannerPrompt(
   history: string,
   message: string,
-  observation?: string,
+  observation?: Observation,
     projectContext?: string
 ): string {
+  if(!observation){
+    return "No previous execution."
+  }
   const tools = toolDefinitions
     .map(
       (tool) => `
@@ -60,6 +104,33 @@ Reasoning Rules
 8. Avoid unnecessary terminal commands.
 
 9. Never overwrite existing user code unless explicitly requested.
+
+Recovery Strategy
+
+1. Read the previous observation carefully.
+
+2. Identify the root cause.
+
+3. Never repeat the exact same failing action.
+
+4. Prefer fixing the cause instead of retrying.
+
+5. Use the suggestion if provided.
+
+6. If recovery is impossible, stop planning.
+
+7. If recovery is possible, generate the safest next action.
+
+If recoverable is true:
+- Do not repeat the same failing command.
+- Use the suggestion if available.
+- Generate a different plan.
+
+If recoverable is false:
+- Stop repeating the same tool.
+- Try another tool if possible.
+
+Always analyze the previous observation before planning.
   
 Conversation History:
 ${history}
@@ -71,9 +142,9 @@ Use the project context to choose frameworks, dependencies and file locations.
 ${
   observation
     ? `
-Previous Execution Result:
-${observation}
+Previous Execution Analysis:
 
+${formatObservation(observation)}
 
 
 The previous execution may have failed.
@@ -114,6 +185,18 @@ Search before File if the location is unknown.
 Prefer File Tool over Terminal whenever possible.
 
 Use Terminal only when filesystem APIs cannot accomplish the task. 
+
+Before using Terminal:
+
+Ask yourself:
+
+Can File Tool do this?
+
+Can Directory Tool do this?
+
+Can Search Tool locate the file first?
+
+Only use Terminal if the answer is NO.
 
 Available Tools:
 
