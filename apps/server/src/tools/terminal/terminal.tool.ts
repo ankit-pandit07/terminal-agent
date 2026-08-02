@@ -10,6 +10,8 @@ export class TerminalTool implements Tool {
   constructor(private session: SessionState) {}
   async execute(input: ToolInput): Promise<ToolOutput> {
     const command = String(input.command);
+    this.session.setLastTool("terminal");
+    this.session.addExecutedCommand(command);
     const cwd = this.session.getCurrentDirectory();
     try {
       //Handle cd command manually
@@ -24,6 +26,7 @@ export class TerminalTool implements Tool {
           this.session.setCurrentDirectory(newPath);
 
           if (parts.length === 0) {
+            this.session.clearLastError();
             return {
               success: true,
               data: `Changed directory to ${newPath}`,
@@ -34,6 +37,7 @@ export class TerminalTool implements Tool {
             shell: true,
             cwd: newPath,
           });
+          this.session.clearLastError();
           return {
             success: true,
             data: `Changed directory to ${newPath}\n${stdout}`,
@@ -43,6 +47,7 @@ export class TerminalTool implements Tool {
       //Handle pwd command
       if (command === "pwd") {
         const currentDirectory = this.session.getCurrentDirectory();
+        this.session.clearLastError();
         return {
           success: true,
           data: currentDirectory,
@@ -57,7 +62,7 @@ export class TerminalTool implements Tool {
         shell: true,
         cwd,
       });
-
+      this.session.clearLastError();
       return {
         success: true,
         data: stdout,
@@ -68,6 +73,7 @@ export class TerminalTool implements Tool {
         },
       };
     } catch (error: any) {
+      this.session.setLastError(error.message);
       return {
         success: false,
         data: error.message,

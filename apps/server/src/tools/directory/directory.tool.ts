@@ -34,6 +34,8 @@ export class DirectoryTool implements Tool {
   }
   private async create(dir: string): Promise<ToolOutput> {
   try {
+    this.session.setLastTool("directory");
+this.session.clearLastError();
     await fs.mkdir(dir, { recursive: true });
 
     return {

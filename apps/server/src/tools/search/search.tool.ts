@@ -62,10 +62,15 @@ export class SearchTool implements Tool {
       ? String(input.path)
       : this.session.getCurrentDirectory();
 
+      this.session.setLastTool("search");
+this.session.clearLastError();
+
     if (!query) {
+        const message="Search query is empty.";
+             this.session.onToolFailure("search",message);
       return {
         success: false,
-        data: "Search query is required.",
+        data:message
       };
     }
 

@@ -49,6 +49,9 @@ public async writeFile(filePath: string, content: string): Promise<void> {
         const filePath = this.resolvePath(String(input.path));
         const content = String(input.content);
         await this.writeFile(filePath, content);
+        this.session.setLastTool("file");
+this.session.addModifiedFile(filePath);
+this.session.clearLastError();
 
         return {
           success: true,

@@ -35,6 +35,17 @@ private observationService = new ObservationService();
     this.registry.register(this.terminalTool);
     this.registry.register(new SearchTool(this.session));
   }
+  private onToolSuccess(tool: string): void {
+    this.session.setLastTool(tool);
+    this.session.clearLastError();
+    this.session.resetRetryCount();
+  }
+
+  private onToolFailure(tool: string, error: string): void {
+    this.session.setLastTool(tool);
+    this.session.setLastError(error);
+    this.session.incrementRetryCount();
+  }
 
   private failure(tool:string,message: string,metadata?: ToolMetadata): ExecutionResult {
     return {
@@ -92,6 +103,7 @@ private observationService = new ObservationService();
             }
 
             await this.fileTool.writeFile(path, updatedContent);
+              this.onToolSuccess("file");
             emitter?.emit("event", {
               type: "tool-complete",
               tool: "file",
@@ -105,11 +117,12 @@ private observationService = new ObservationService();
               true,
             );
             outputs.push(`Updated file:${path}`);
-
+this.session.addModifiedFile(path);
             continue;
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Unknown error";
+              this.onToolFailure("file", message);
             await this.toolExecutionRepository.create(
               executionId,
               "file",
@@ -133,6 +146,7 @@ private observationService = new ObservationService();
 
         if (step.tool === "terminal") {
           const command = String(step.input.command);
+          this.session.addExecutedCommand(command);
           emitter?.emit("event", {
             type: "tool-complete",
             tool: "terminal",
@@ -146,6 +160,14 @@ private observationService = new ObservationService();
         }
 
         const result = await tool.execute(step.input);
+        if (result.success) {
+  this.onToolSuccess(step.tool);
+} else {
+  this.onToolFailure(
+    step.tool,
+    String(result.data),
+  );
+}
         emitter?.emit("event", {
           type: "tool-complete",
           tool: step.tool,
@@ -172,13 +194,18 @@ private observationService = new ObservationService();
 const output=outputs.join("\n")
       return {
         success: true,
-        output: outputs.join("\n"),
+        output,
         completed: true,
+        
 
         observation:this.observationService.create(
         "executor",
         true,
-        output
+        output,{
+          cwd:this.session.getCurrentDirectory(),
+          filesModified:this.session.getModifiedFiles(),
+          command:this.session.getExecutedCommands().join(" && "),
+        }
     )
       };
     } catch (error) {
