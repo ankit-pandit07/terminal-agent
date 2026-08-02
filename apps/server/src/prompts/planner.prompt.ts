@@ -1,4 +1,5 @@
 import type { Observation } from "../observation/observation.js";
+import type { DependencyAnalysis, GoalAnalysis, RiskAnalysis } from "../planner/planner.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
 
 function formatObservation(
@@ -47,6 +48,9 @@ export function buildPlannerPrompt(
   observation?: Observation,
     projectContext?: string,
     sessionContext?: string,
+    goal?: GoalAnalysis,
+    dependencies?: DependencyAnalysis,
+    risk?: RiskAnalysis
 ): string {
  
   const tools = toolDefinitions
@@ -83,6 +87,28 @@ You ONLY decide:
 - Use the previous execution result to recover from errors.
 - Do not generate the exact same failing command unless the observation suggests a retry may succeed.
 - Prefer fixing the cause of the failure before continuing.
+
+Dependency Analysis:
+
+Required Files:
+${dependencies?.requiredFiles.length
+    ? dependencies.requiredFiles.map(file => `- ${file}`).join("\n")
+    : "None"}
+
+Required Tools:
+${dependencies?.requiredTools.length
+    ? dependencies.requiredTools.map(tool => `- ${tool}`).join("\n")
+    : "None"}
+
+Prerequisites:
+${dependencies?.prerequisites.length
+    ? dependencies.prerequisites.map(item => `- ${item}`).join("\n")
+    : "None"}
+
+Potential Risks:
+${dependencies?.risks.length
+    ? dependencies.risks.map(risk => `- ${risk}`).join("\n")
+    : "None"}
 
 Reasoning Rules
 
@@ -131,7 +157,23 @@ If recoverable is false:
 - Stop planning if no safe recovery exists.
 
 Always analyze the previous observation before planning.
-  
+
+Goal Analysis:
+
+Goal:
+${goal?.goal ?? "Unknown"}
+
+Objective:
+${goal?.objective ?? "Unknown"}
+
+Constraints:
+${goal?.constraints.length
+    ? goal.constraints.map(c => `- ${c}`).join("\n")
+    : "None"}
+
+Expected Outcome:
+${goal?.expectedOutcome ?? "Unknown"}
+
 Conversation History:
 ${history}
 
@@ -149,13 +191,25 @@ Previous Execution Analysis:
 
 ${formatObservation(observation)}
 
-Execution Memory:
-
-${sessionContext}
 
 The previous execution may have failed.
 
 Your job is to analyze the observation and produce the NEXT best plan.
+
+Risk Analysis
+
+Risk Level:
+${risk?.level ?? "Unknown"}
+
+Detected Risks:
+${risk?.risks.length
+    ? risk.risks.map(r => `- ${r}`).join("\n")
+    : "None"}
+
+Mitigation:
+${risk?.mitigation.length
+    ? risk.mitigation.map(m => `- ${m}`).join("\n")
+    : "None"}
 
 Rules:
 - Understand why the previous step failed.
@@ -209,6 +263,22 @@ Available Tools:
 ${tools}
 
 Return ONLY valid JSON.
+
+Planning Rules
+
+Before generating a plan:
+
+1. Verify the goal.
+
+2. Verify dependencies.
+
+3. Verify workspace.
+
+4. Verify previous observations.
+
+5. Avoid repeating previous failures.
+
+6. Produce the smallest safe execution plan.
 
 Completion Rules:
 

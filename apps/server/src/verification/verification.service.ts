@@ -5,23 +5,24 @@ import type { VerificationResult } from "./verification.types.js";
 import type { Verifier } from "./verifier.js";
 
 export class VerificationService implements Verifier {
-    verify(plan: Plan, observation: Observation): VerificationResult {
-        if(VerificationRules.isCompleted(plan)){
-            return {
-                status:"completed",
-                reason:"No remaining steps in the execution plan."
-            }
-        }
-
-        if(VerificationRules.hasFailed(observation)){
-            return {
-                status :"failed",
-                reason:observation.summary,
-            }
-        }
-        return {
-            status:"continue",
-            reason:"Execution should continue."
-        }
+  verify(plan: Plan, observation: Observation): VerificationResult {
+    if (VerificationRules.hasFailed(observation)) {
+      return {
+        status: "failed",
+        reason: `[${observation.tool}] ${observation.summary}`,
+      };
     }
+
+    if (VerificationRules.isCompleted(plan)) {
+      return {
+        status: "completed",
+        reason: "Execution completed successfully.",
+      };
+    }
+
+    return {
+      status: "continue",
+      reason: "Planner should generate the next execution step.",
+    };
+  }
 }

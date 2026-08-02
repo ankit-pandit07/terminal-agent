@@ -77,7 +77,7 @@ export class ExecutorService implements Executor {
         );
       }
 
-      let outputs: string[] = [];
+      const outputs: string[] = [];
 
       for (const step of plan.steps) {
         emitter?.emit("event", {
@@ -122,7 +122,7 @@ export class ExecutorService implements Executor {
               `Updated file: ${path}`,
               true,
             );
-            outputs.push(`Updated file:${path}`);
+            outputs.push(`Updated file: ${path}`);
             this.session.addModifiedFile(path);
             continue;
           } catch (error) {

@@ -1,7 +1,15 @@
+import type { ToolInput } from "../tools/base/tool.interface.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
 import type { Plan } from "./planner.js";
 
 export class PlanValidator {
+  private readonly allowedFileActions = [
+    "read",
+    "write",
+    "edit",
+    "create",
+    "delete",
+  ] as const;
   private readonly availableTools = new Set(
     toolDefinitions.map((tool) => tool.name),
   );
@@ -24,7 +32,9 @@ export class PlanValidator {
         throw new Error(`Step ${index + 1}: Missing tool.`);
       }
       if (!this.availableTools.has(step.tool)) {
-        throw new Error(`Step ${index + 1}: Unknown tool "${step.tool}".`);
+        throw new Error(
+          `Step ${index + 1}: Unknown tool "${step.tool}". Available tools: ${[...this.availableTools].join(", ")}.`,
+        );
       }
       if (!step.input) {
         throw new Error(`Step ${index + 1}: Missing input.`);
@@ -33,11 +43,19 @@ export class PlanValidator {
       this.validateInput(step.tool, step.input, index);
     });
   }
-  private validateInput(tool: string, input: any, index: number) {
+  private validateInput(tool: string, input: ToolInput, index: number) {
     switch (tool) {
       case "terminal":
-        if (typeof input.command !== "string" || input.command.trim() === "") {
+        const command = input.command;
+
+        if (typeof command !== "string" || command.trim() === "") {
           throw new Error(`Step ${index + 1}: Terminal command is required.`);
+        }
+
+        if (command.length > 1000) {
+          throw new Error(
+            `Step ${index + 1}: Terminal command exceeds maximum length.`,
+          );
         }
         break;
 
@@ -45,8 +63,16 @@ export class PlanValidator {
         if (typeof input.path !== "string" || input.path.trim() === "") {
           throw new Error(`Step ${index + 1}: File path is required.`);
         }
-        if (typeof input.action !== "string" || input.action.trim() === "") {
-          throw new Error(`Step ${index + 1}: File action is required.`);
+
+        if (
+          typeof input.action !== "string" ||
+          !this.allowedFileActions.includes(
+            input.action as (typeof this.allowedFileActions)[number],
+          )
+        ) {
+          throw new Error(
+            `Step ${index + 1}: Invalid file action. Allowed actions: ${this.allowedFileActions.join(", ")}.`,
+          );
         }
         break;
 

@@ -5,19 +5,43 @@ export class JsonParser {
     try {
       const plan = JSON.parse(text);
 
-      if (!plan.steps || !Array.isArray(plan.steps)) {
-        throw new Error("Invalid plan structure");
+      if (typeof plan !== "object" || plan === null) {
+        throw new Error("Planner response must be a JSON object.");
       }
 
-      for (const step of plan.steps) {
-        if (!step.tool || !step.input) {
-          throw new Error("Invalid step structure");
-        }
+      if (!Array.isArray(plan.steps)) {
+        throw new Error("Planner response must contain a steps array.");
       }
+
+      plan.steps.forEach((step: unknown, index: number) => {
+        if (typeof step !== "object" || step === null) {
+          throw new Error(`Step ${index + 1}: Invalid step.`);
+        }
+
+        const currentStep = step as Record<string, unknown>;
+
+        if (typeof currentStep.tool !== "string") {
+          throw new Error(`Step ${index + 1}: Missing or invalid tool.`);
+        }
+
+        if (
+          typeof currentStep.input !== "object" ||
+          currentStep.input === null
+        ) {
+          throw new Error(`Step ${index + 1}: Missing or invalid input.`);
+        }
+      });
 
       return plan as Plan;
-    } catch {
-      throw new Error("Invalid JSON returned by LLM");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unknown parsing error";
+
+      throw new Error(
+        `Failed to parse planner response: ${message}`,
+      );
     }
   }
 }
