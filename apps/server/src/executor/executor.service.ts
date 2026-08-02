@@ -24,7 +24,7 @@ export class ExecutorService implements Executor {
   private directoryTool = new DirectoryTool(this.session);
   private editor = new EditorService();
   private terminalTool = new TerminalTool(this.session);
-private observationService = new ObservationService();
+  private observationService = new ObservationService();
 
   private toolExecutionRepository = new ToolExecutionRepository();
 
@@ -47,28 +47,34 @@ private observationService = new ObservationService();
     this.session.incrementRetryCount();
   }
 
-  private failure(tool:string,message: string,metadata?: ToolMetadata): ExecutionResult {
+  private failure(
+    tool: string,
+    message: string,
+    metadata?: ToolMetadata,
+  ): ExecutionResult {
     return {
       success: false,
       output: message,
-      completed: false,
       observation: this.observationService.create(
-     tool,
-    false,
-    message,
-    metadata,
-    ),
+        tool,
+        false,
+        message,
+        metadata,
+      ),
     };
   }
 
   async execute(
     executionId: string,
     plan: Plan,
-        emitter?: AgentEventEmitter,
+    emitter?: AgentEventEmitter,
   ): Promise<ExecutionResult> {
     try {
       if (plan.steps.length === 0) {
-        return this.failure("planner","Planner returned an empty execution plan.");
+        return this.failure(
+          "planner",
+          "Planner returned an empty execution plan.",
+        );
       }
 
       let outputs: string[] = [];
@@ -103,7 +109,7 @@ private observationService = new ObservationService();
             }
 
             await this.fileTool.writeFile(path, updatedContent);
-              this.onToolSuccess("file");
+            this.onToolSuccess("file");
             emitter?.emit("event", {
               type: "tool-complete",
               tool: "file",
@@ -117,12 +123,12 @@ private observationService = new ObservationService();
               true,
             );
             outputs.push(`Updated file:${path}`);
-this.session.addModifiedFile(path);
+            this.session.addModifiedFile(path);
             continue;
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Unknown error";
-              this.onToolFailure("file", message);
+            this.onToolFailure("file", message);
             await this.toolExecutionRepository.create(
               executionId,
               "file",
@@ -130,18 +136,18 @@ this.session.addModifiedFile(path);
               message,
               false,
             );
-            return this.failure(step.tool,message);
+            return this.failure(step.tool, message);
           }
         }
-        
+
         if (!tool) {
           const message = `Tool "${step.tool}" not found`;
           emitter?.emit("event", {
-          type: "tool-complete",
-          tool: step.tool,
-          success: false,
-        });
-          return this.failure(step.tool,message);
+            type: "tool-complete",
+            tool: step.tool,
+            success: false,
+          });
+          return this.failure(step.tool, message);
         }
 
         if (step.tool === "terminal") {
@@ -155,19 +161,17 @@ this.session.addModifiedFile(path);
           if (!this.guard.isSafe(command)) {
             return this.failure(
               "terminal",
-              "Blocked: Unsafe command detected.");
+              "Blocked: Unsafe command detected.",
+            );
           }
         }
 
         const result = await tool.execute(step.input);
         if (result.success) {
-  this.onToolSuccess(step.tool);
-} else {
-  this.onToolFailure(
-    step.tool,
-    String(result.data),
-  );
-}
+          this.onToolSuccess(step.tool);
+        } else {
+          this.onToolFailure(step.tool, String(result.data));
+        }
         emitter?.emit("event", {
           type: "tool-complete",
           tool: step.tool,
@@ -182,31 +186,21 @@ this.session.addModifiedFile(path);
         );
 
         if (!result.success) {
-          return this.failure(
-            step.tool,
-            String(result.data),
-            result.metadata
-          );
+          return this.failure(step.tool, String(result.data), result.metadata);
         }
 
         outputs.push(String(result.data));
       }
-const output=outputs.join("\n")
+      const output = outputs.join("\n");
       return {
         success: true,
         output,
-        completed: true,
-        
 
-        observation:this.observationService.create(
-        "executor",
-        true,
-        output,{
-          cwd:this.session.getCurrentDirectory(),
-          filesModified:this.session.getModifiedFiles(),
-          command:this.session.getExecutedCommands().join(" && "),
-        }
-    )
+        observation: this.observationService.create("executor", true, output, {
+          cwd: this.session.getCurrentDirectory(),
+          filesModified: this.session.getModifiedFiles(),
+          command: this.session.getExecutedCommands().join(" && "),
+        }),
       };
     } catch (error) {
       emitter?.emit("event", {
@@ -215,7 +209,10 @@ const output=outputs.join("\n")
         success: false,
       });
       const message = error instanceof Error ? error.message : "Unknown error";
-      return this.failure("unknown",message);
+      return this.failure("unknown", message);
     }
+  }
+  getSession(): SessionState {
+    return this.session;
   }
 }

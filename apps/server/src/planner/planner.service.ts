@@ -40,6 +40,7 @@ ${Object.entries(workspace.scripts)
     message: string,
     history: string,
     workspace: WorkspaceInfo,
+    sessionContext: string,
     observation?: Observation,
   ): Promise<Plan> {
     const projectContext = this.buildProjectContext(workspace);
@@ -49,6 +50,7 @@ ${Object.entries(workspace.scripts)
       message,
       observation,
       projectContext,
+      sessionContext,
     );
 
     const response = await this.llm.generate({

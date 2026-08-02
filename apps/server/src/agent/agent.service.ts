@@ -82,6 +82,16 @@ export class AgentService {
       let executionHistory = "";
       let lastObservation: Observation | undefined;
       for (let i = 0; i < this.MAX_ITERATIONS; i++) {
+        const sessionContext = this.buildSessionContext();
+const plannerHistory = `
+Conversation Context:
+
+${context}
+
+Execution History:
+
+${executionHistory}
+`;
         this.emit(emitter, {
           type: "planning",
           message: `Planning iteration ${i + 1}...`,
@@ -89,8 +99,9 @@ export class AgentService {
 
         const plan = await this.planner.createPlan(
           request.message,
-          context,
+          plannerHistory,
           workspace,
+          sessionContext,
           lastObservation
         );
         this.emit(emitter, {
@@ -116,14 +127,18 @@ export class AgentService {
 
           continue;
         }
-        if (result.completed) {
-          this.emit(emitter, {
-            type: "completed",
-            response: result.output,
-          });
+        if (verification.status === "completed") {
+    this.emit(emitter, {
+        type: "completed",
+        response: result.output,
+    });
 
-          return this.finishExecution(execution.id, conversation.id, result);
-        }
+    return this.finishExecution(
+        execution.id,
+        conversation.id,
+        result,
+    );
+}
 
         if (plan.steps.length === 0) {
           return this.failExecution(
@@ -238,7 +253,29 @@ ${observation.errors.join("\n")}
 `
     );
   }
+private buildSessionContext(): string {
+  const session = this.executor.getSession();
 
+  return `
+Current Directory:
+${session.getCurrentDirectory()}
+
+Last Tool:
+${session.getLastTool() ?? "None"}
+
+Retry Count:
+${session.getRetryCount()}
+
+Last Error:
+${session.getLastError() ?? "None"}
+
+Commands Executed:
+${session.getExecutedCommands().join("\n") || "None"}
+
+Modified Files:
+${session.getModifiedFiles().join("\n") || "None"}
+`;
+}
   private verify(plan: Plan, observation: Observation) {
     return this.verifier.verify(plan, observation);
   }
@@ -280,31 +317,27 @@ ${observation.errors.join("\n")}
       conversationId,
     };
   }
-  private shouldRetry(
-    verification: VerificationResult,
-    observation: Observation,
-    retryCount: number,
-  ): boolean {
-    // Retry limit reached
-    if (retryCount >= this.MAX_ITERATIONS - 1) {
-      return false;
-    }
-
-    // Execution successful
-    if (verification.status === "completed") {
-      return false;
-    }
-
-    // Recoverable failure
-    if (verification.status === "failed" && observation.recoverable) {
-      return true;
-    }
-
-    // Planner needs another iteration
-    if (verification.status === "continue") {
-      return true;
-    }
-
+private shouldRetry(
+  verification: VerificationResult,
+  observation: Observation,
+  retryCount: number,
+): boolean {
+  if (retryCount >= this.MAX_ITERATIONS - 1) {
     return false;
   }
+
+  switch (verification.status) {
+    case "completed":
+      return false;
+
+    case "continue":
+      return true;
+
+    case "failed":
+      return observation.recoverable;
+
+    default:
+      return false;
+  }
+}
 }

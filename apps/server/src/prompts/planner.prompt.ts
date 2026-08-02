@@ -45,11 +45,10 @@ export function buildPlannerPrompt(
   history: string,
   message: string,
   observation?: Observation,
-    projectContext?: string
+    projectContext?: string,
+    sessionContext?: string,
 ): string {
-  if(!observation){
-    return "No previous execution."
-  }
+ 
   const tools = toolDefinitions
     .map(
       (tool) => `
@@ -127,8 +126,9 @@ If recoverable is true:
 - Generate a different plan.
 
 If recoverable is false:
-- Stop repeating the same tool.
-- Try another tool if possible.
+- Do not repeat the same action.
+- Do not attempt unsafe alternatives.
+- Stop planning if no safe recovery exists.
 
 Always analyze the previous observation before planning.
   
@@ -138,6 +138,9 @@ ${history}
 Project Context:
 ${projectContext || "Unknown"}
 
+Execution Memory:
+${sessionContext || "No execution memory available."}
+
 Use the project context to choose frameworks, dependencies and file locations.
 ${
   observation
@@ -146,6 +149,9 @@ Previous Execution Analysis:
 
 ${formatObservation(observation)}
 
+Execution Memory:
+
+${sessionContext}
 
 The previous execution may have failed.
 

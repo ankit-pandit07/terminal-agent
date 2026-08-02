@@ -74,4 +74,14 @@ private lastError: string | undefined = undefined;
         this.executedCommands=[];
         this.modifiedFiles=[];
     }
+    getSnapshot(){
+        return {
+            currentDirectory:this.currentDirectory,
+            lastTool:this.lastTool,
+            lastError:this.lastError,
+            retryCount:this.retryCount,
+            executedCommands:[...this.executedCommands],
+            modifiedFiles:[...this.modifiedFiles]
+        }
+    }
 }
