@@ -16,6 +16,27 @@ export interface ToolMetadata {
     cwd?:string;
 }
 
+export type ToolCategory=
+| "system"
+| "filesystem"
+| "search"
+| "network"
+| "database"
+| "utility";
+
+export interface ToolInfo {
+    name:string;
+    displayName:string;
+    description:string;
+    category:ToolCategory;
+
+    version:string;
+    author:string;
+
+    enabled:boolean;
+    capabilities:readonly string[];
+}
+
 export interface ToolOutput {
     success:boolean;
     data:unknown;
@@ -26,6 +47,8 @@ export interface ToolOutput {
 export interface Tool {
     name:string;
     description:string;
+    info:ToolInfo;
+
 
     execute(input:ToolInput):Promise<ToolOutput>;
 }

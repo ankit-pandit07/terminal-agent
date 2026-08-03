@@ -5,22 +5,42 @@ import { SessionState } from "../../session/session.state.js";
 
 export class FileTool implements Tool {
   name = "file";
+readonly info = {
+  name: "file",
+  displayName: "File",
 
+  description: "Read, write and edit files",
+
+  category: "filesystem",
+
+  version: "1.0.0",
+
+  author: "NodeBase",
+
+  enabled: true,
+
+  capabilities: [
+    "read",
+    "write",
+    "edit",
+    "delete",
+  ],
+} as const;
   description = "Create, read and write files.";
   constructor(private session: SessionState) {}
 
   private resolvePath(filePath: string): string {
     return path.resolve(this.session.getCurrentDirectory(), filePath);
   }
-public async readFile(filePath: string): Promise<string> {
-  const resolvedPath = this.resolvePath(filePath);
-  return await fs.readFile(resolvedPath, "utf-8");
-}
+  public async readFile(filePath: string): Promise<string> {
+    const resolvedPath = this.resolvePath(filePath);
+    return await fs.readFile(resolvedPath, "utf-8");
+  }
 
-public async writeFile(filePath: string, content: string): Promise<void> {
-  const resolvedPath = this.resolvePath(filePath);
-  await fs.writeFile(resolvedPath, content);
-}
+  public async writeFile(filePath: string, content: string): Promise<void> {
+    const resolvedPath = this.resolvePath(filePath);
+    await fs.writeFile(resolvedPath, content);
+  }
   async execute(input: ToolInput): Promise<ToolOutput> {
     const action = String(input.action);
 
@@ -50,8 +70,8 @@ public async writeFile(filePath: string, content: string): Promise<void> {
         const content = String(input.content);
         await this.writeFile(filePath, content);
         this.session.setLastTool("file");
-this.session.addModifiedFile(filePath);
-this.session.clearLastError();
+        this.session.addModifiedFile(filePath);
+        this.session.clearLastError();
 
         return {
           success: true,

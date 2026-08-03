@@ -5,7 +5,23 @@ import { SessionState } from "../../session/session.state.js";
 
 export class TerminalTool implements Tool {
   name = "terminal";
+readonly info = {
+  name: "terminal",
+  displayName: "Terminal",
+  description: "Execute terminal commands",
+  category: "system",
 
+  version: "1.0.0",
+  author: "NodeBase",
+
+  enabled: true,
+
+  capabilities: [
+    "shell",
+    "command",
+    "process",
+  ],
+} as const;
   description = "Execute terminal commands.";
   constructor(private session: SessionState) {}
   async execute(input: ToolInput): Promise<ToolOutput> {
