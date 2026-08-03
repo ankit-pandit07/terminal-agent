@@ -124,6 +124,9 @@ export class ExecutorService implements Executor {
             );
             outputs.push(`Updated file: ${path}`);
             this.session.addModifiedFile(path);
+            this.session.addRecovery(
+              `Successfully modified ${path}`
+            )
             continue;
           } catch (error) {
             const message =
@@ -169,8 +172,20 @@ export class ExecutorService implements Executor {
         const result = await tool.execute(step.input);
         if (result.success) {
           this.onToolSuccess(step.tool);
+          //memory engine
+          if(step.tool === "terminal" && step.input.command){
+            this.session.addSuccessfulCommand(
+              String(step.input.command),
+            )
+          }
         } else {
           this.onToolFailure(step.tool, String(result.data));
+          //Memory engine
+          if(step.tool === "terminal" && step.input.command){
+            this.session.addFailedCommand(
+              String(step.input.command)
+            )
+          }
         }
         emitter?.emit("event", {
           type: "tool-complete",
@@ -186,7 +201,24 @@ export class ExecutorService implements Executor {
         );
 
         if (!result.success) {
-          return this.failure(step.tool, String(result.data), result.metadata);
+          const observation=this.observationService.create(
+            step.tool,
+            false,
+            String(result.data),
+            result.metadata
+          );
+
+          if(observation.recoverable && observation.suggestion){
+            this.session.addRecovery(
+              observation.suggestion,
+            );
+          }
+
+          return {
+            success:false,
+            output:String(result.data),
+            observation
+          }
         }
 
         outputs.push(String(result.data));

@@ -24,6 +24,7 @@ export class TerminalTool implements Tool {
           const newPath = path.resolve(cwd, target);
 
           this.session.setCurrentDirectory(newPath);
+          this.session.addVisitedDirectory(newPath)
 
           if (parts.length === 0) {
             this.session.clearLastError();

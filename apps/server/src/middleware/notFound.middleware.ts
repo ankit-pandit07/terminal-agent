@@ -1,12 +1,14 @@
-import type { Request,Response } from "express";
+import type { RequestHandler } from "express";
 
-export function notFoundMiddleware(
-    req:Request,
-    res:Response,
-)
-{
-    res.status(404).json({
-        success:false,
-        message:"Route Not Found"
-    });
-}
+export const notFoundMiddleware: RequestHandler = (
+  req,
+  res,
+) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "NOT_FOUND",
+      message: `Route '${req.originalUrl}' not found.`,
+    },
+  });
+};

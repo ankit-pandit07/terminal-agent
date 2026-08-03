@@ -260,29 +260,81 @@ ${observation.errors.join("\n")}
 `
     );
   }
-  private buildSessionContext(): string {
-    const session = this.executor.getSession();
+private buildSessionContext(): string {
+  const session = this.executor.getSession();
 
-    return `
+  return `
+==============================
+Execution Memory
+==============================
+
 Current Directory:
 ${session.getCurrentDirectory()}
 
 Last Tool:
 ${session.getLastTool() ?? "None"}
 
-Retry Count:
-${session.getRetryCount()}
-
 Last Error:
 ${session.getLastError() ?? "None"}
 
-Commands Executed:
-${session.getExecutedCommands().join("\n") || "None"}
+Retry Count:
+${session.getRetryCount()}
+
+--------------------------------
+
+Executed Commands:
+${
+  session.getExecutedCommands().length
+    ? session.getExecutedCommands().map(cmd => `- ${cmd}`).join("\n")
+    : "None"
+}
+
+--------------------------------
+
+Successful Commands:
+${
+  session.getSuccessfulCommands().length
+    ? session.getSuccessfulCommands().map(cmd => `- ${cmd}`).join("\n")
+    : "None"
+}
+
+--------------------------------
+
+Failed Commands:
+${
+  session.getFailedCommands().length
+    ? session.getFailedCommands().map(cmd => `- ${cmd}`).join("\n")
+    : "None"
+}
+
+--------------------------------
 
 Modified Files:
-${session.getModifiedFiles().join("\n") || "None"}
+${
+  session.getModifiedFiles().length
+    ? session.getModifiedFiles().map(file => `- ${file}`).join("\n")
+    : "None"
+}
+
+--------------------------------
+
+Visited Directories:
+${
+  session.getVisitedDirectories().length
+    ? session.getVisitedDirectories().map(dir => `- ${dir}`).join("\n")
+    : "None"
+}
+
+--------------------------------
+
+Recovery History:
+${
+  session.getRecoveryHistory().length
+    ? session.getRecoveryHistory().map(item => `- ${item}`).join("\n")
+    : "None"
+}
 `;
-  }
+}
   private verify(plan: Plan, observation: Observation) {
     return this.verifier.verify(plan, observation);
   }
