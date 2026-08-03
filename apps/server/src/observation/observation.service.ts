@@ -1,9 +1,14 @@
 import type { ToolMetadata } from "../tools/base/tool.interface.js";
-import type { ObservationSeverity } from "./observation.js";
+import type { ObservationSeverity, Reflection } from "./observation.js";
 import type { Observation } from "./observation.js";
 
 export class ObservationService {
-  create(tool: string, success: boolean, output: string, metadata?: ToolMetadata): Observation {
+  create(
+    tool: string,
+    success: boolean,
+    output: string,
+    metadata?: ToolMetadata,
+  ): Observation {
     const severity = this.detectSeverity(success);
     const recoverable = this.isRecoverable(output);
     const suggestion = this.buildSuggestion(output);
@@ -21,7 +26,27 @@ export class ObservationService {
       suggestion,
     } as Observation;
   }
+  createReflection(observation: Observation): Reflection {
+    if (observation.success) {
+      return {
+        success: true,
+        rootCause: "Execution completed successfully.",
+        lesson: "Continue with the remaining execution plan.",
+        nextAction: "Proceed to the next planned step.",
+        confidence: 1,
+        shouldRetry: false,
+      };
+    }
 
+    return {
+      success: false,
+      rootCause: observation.summary,
+      lesson: observation.suggestion ?? "Investigate the execution failure.",
+      nextAction: observation.suggestion ?? "Revise the execution plan.",
+      confidence: observation.recoverable ? 0.9 : 0.6,
+      shouldRetry: observation.recoverable,
+    };
+  }
   private buildSummary(success: boolean, output: string): string {
     if (success) {
       return output;

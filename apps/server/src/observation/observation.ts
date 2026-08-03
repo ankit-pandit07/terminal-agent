@@ -1,6 +1,20 @@
 import type { ToolMetadata } from "../tools/base/tool.interface.js";
 export type ObservationSeverity = "info" | "warning" | "error";
 
+export interface Reflection {
+  success: boolean;
+
+  rootCause: string;
+
+  lesson: string;
+
+  nextAction: string;
+
+  confidence: number;
+
+  shouldRetry:boolean;
+}
+
 export type Observation = {
   success: boolean;
   tool: string;

@@ -1,9 +1,9 @@
-import type { Observation } from "../observation/index.js";
+import type { Observation, Reflection } from "../observation/index.js";
 import type { ToolInput } from "../tools/base/tool.interface.js";
 import type { WorkspaceInfo } from "../workspace/index.js";
 
 export interface GoalAnalysis {
-  goal:string;
+  goal: string;
   objective: string;
   constraints: string[];
   expectedOutcome: string;
@@ -21,13 +21,27 @@ export interface RiskAnalysis {
 
   risks: string[];
 
-  mitigation:string[];
+  mitigation: string[];
 }
 
+export interface PriorityAnalysis {
+  executionOrder: string[];
+  criticalSteps: string[];
+  optionalSteps: string[];
+}
+export interface ExecutionStrategy {
+  mode: "sequential" | "parallel";
+
+  reason: string;
+
+  verifyAfterEachStep: boolean;
+
+  allowRetry: boolean;
+}
 export interface PlanStep {
   tool: string;
   input: ToolInput;
-  reason?:string;
+  reason?: string;
   priority?: number;
 }
 
@@ -41,4 +55,5 @@ export interface PlannerRequest {
   workspace: WorkspaceInfo;
   sessionContext: string;
   observation?: Observation;
+  reflection?:Reflection
 }

@@ -20,7 +20,8 @@ import { VerificationService } from "../verification/verification.service.js";
 import type { ExecutionResult } from "../executor/executor.js";
 import type { Plan } from "../planner/planner.js";
 import type { VerificationResult } from "../verification/verification.types.js";
-import type { Observation } from "../observation/observation.js";
+import type { Observation, Reflection } from "../observation/observation.js";
+import { ObservationService } from "../observation/observation.service.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -36,6 +37,7 @@ export class AgentService {
   private executionRepository = new ExecutionRepository();
   private workspaceService = new WorkspaceService();
   private readonly MAX_ITERATIONS = 5;
+  private observationService = new ObservationService();
 
   async process(
     request: AgentRequest,
@@ -81,9 +83,10 @@ export class AgentService {
 
       let executionHistory = "";
       let lastObservation: Observation | undefined;
+      let lastReflection: Reflection | undefined;
       for (let i = 0; i < this.MAX_ITERATIONS; i++) {
         const sessionContext = this.buildSessionContext();
-const plannerHistory = `
+        const plannerHistory = `
 Conversation Context:
 
 ${context}
@@ -102,15 +105,23 @@ ${executionHistory}
           plannerHistory,
           workspace,
           sessionContext,
-          lastObservation
+          lastObservation,
+          lastReflection
         );
         this.emit(emitter, {
           type: "plan-created",
           steps: plan.steps.length,
         });
         const result = await this.executor.execute(execution.id, plan, emitter);
-         lastObservation = result.observation;
+        lastObservation = result.observation;
 
+        lastReflection=this.observationService.createReflection(
+          result.observation
+        )
+        this.emit(emitter, {
+  type: "reflection",
+  reflection: lastReflection,
+});
         const verification = this.verify(plan, result.observation);
         const retry = this.shouldRetry(verification, result.observation, i);
 
@@ -128,17 +139,13 @@ ${executionHistory}
           continue;
         }
         if (verification.status === "completed") {
-    this.emit(emitter, {
-        type: "completed",
-        response: result.output,
-    });
+          this.emit(emitter, {
+            type: "completed",
+            response: result.output,
+          });
 
-    return this.finishExecution(
-        execution.id,
-        conversation.id,
-        result,
-    );
-}
+          return this.finishExecution(execution.id, conversation.id, result);
+        }
 
         if (plan.steps.length === 0) {
           return this.failExecution(
@@ -253,10 +260,10 @@ ${observation.errors.join("\n")}
 `
     );
   }
-private buildSessionContext(): string {
-  const session = this.executor.getSession();
+  private buildSessionContext(): string {
+    const session = this.executor.getSession();
 
-  return `
+    return `
 Current Directory:
 ${session.getCurrentDirectory()}
 
@@ -275,7 +282,7 @@ ${session.getExecutedCommands().join("\n") || "None"}
 Modified Files:
 ${session.getModifiedFiles().join("\n") || "None"}
 `;
-}
+  }
   private verify(plan: Plan, observation: Observation) {
     return this.verifier.verify(plan, observation);
   }
@@ -317,27 +324,27 @@ ${session.getModifiedFiles().join("\n") || "None"}
       conversationId,
     };
   }
-private shouldRetry(
-  verification: VerificationResult,
-  observation: Observation,
-  retryCount: number,
-): boolean {
-  if (retryCount >= this.MAX_ITERATIONS - 1) {
-    return false;
-  }
-
-  switch (verification.status) {
-    case "completed":
+  private shouldRetry(
+    verification: VerificationResult,
+    observation: Observation,
+    retryCount: number,
+  ): boolean {
+    if (retryCount >= this.MAX_ITERATIONS - 1) {
       return false;
+    }
 
-    case "continue":
-      return true;
+    switch (verification.status) {
+      case "completed":
+        return false;
 
-    case "failed":
-      return observation.recoverable;
+      case "continue":
+        return true;
 
-    default:
-      return false;
+      case "failed":
+        return observation.recoverable;
+
+      default:
+        return false;
+    }
   }
-}
 }

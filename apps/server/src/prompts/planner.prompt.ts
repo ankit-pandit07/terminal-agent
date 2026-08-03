@@ -1,5 +1,5 @@
-import type { Observation } from "../observation/observation.js";
-import type { DependencyAnalysis, GoalAnalysis, RiskAnalysis } from "../planner/planner.js";
+import type { Observation, Reflection } from "../observation/observation.js";
+import type { DependencyAnalysis, ExecutionStrategy, GoalAnalysis, PriorityAnalysis, RiskAnalysis } from "../planner/planner.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
 
 function formatObservation(
@@ -50,7 +50,10 @@ export function buildPlannerPrompt(
     sessionContext?: string,
     goal?: GoalAnalysis,
     dependencies?: DependencyAnalysis,
-    risk?: RiskAnalysis
+    risk?: RiskAnalysis,
+    priority?: PriorityAnalysis,
+    strategy?: ExecutionStrategy,
+    reflection?:Reflection
 ): string {
  
   const tools = toolDefinitions
@@ -109,6 +112,36 @@ Potential Risks:
 ${dependencies?.risks.length
     ? dependencies.risks.map(risk => `- ${risk}`).join("\n")
     : "None"}
+
+    Execution Strategy
+
+Mode:
+${strategy?.mode}
+
+Reason:
+${strategy?.reason}
+
+Verify After Each Step:
+${strategy?.verifyAfterEachStep}
+
+Allow Retry:
+${strategy?.allowRetry}
+Reflection
+
+Root Cause:
+Package.json was missing.
+
+Lesson:
+Search for package.json before running npm commands.
+
+Next Action:
+Locate the project root.
+
+Confidence:
+0.90
+
+Should Retry:
+true
 
 Reasoning Rules
 
@@ -196,6 +229,26 @@ The previous execution may have failed.
 
 Your job is to analyze the observation and produce the NEXT best plan.
 
+Reflection
+
+Success:
+${reflection?.success ?? false}
+
+Root Cause:
+${reflection?.rootCause ?? "Unknown"}
+
+Lesson Learned:
+${reflection?.lesson ?? "None"}
+
+Recommended Next Action:
+${reflection?.nextAction ?? "None"}
+
+Confidence:
+${reflection?.confidence ?? 0}
+
+Should Retry:
+${reflection?.shouldRetry ?? false}
+
 Risk Analysis
 
 Risk Level:
@@ -209,6 +262,23 @@ ${risk?.risks.length
 Mitigation:
 ${risk?.mitigation.length
     ? risk.mitigation.map(m => `- ${m}`).join("\n")
+    : "None"}
+
+    Priority Planning
+
+Execution Order:
+${priority?.executionOrder.length
+    ? priority.executionOrder.map(step => `- ${step}`).join("\n")
+    : "None"}
+
+Critical Steps:
+${priority?.criticalSteps.length
+    ? priority.criticalSteps.map(step => `- ${step}`).join("\n")
+    : "None"}
+
+Optional Steps:
+${priority?.optionalSteps.length
+    ? priority.optionalSteps.map(step => `- ${step}`).join("\n")
     : "None"}
 
 Rules:
