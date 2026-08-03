@@ -22,6 +22,7 @@ import type { Plan } from "../planner/planner.js";
 import type { VerificationResult } from "../verification/verification.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
 import { ObservationService } from "../observation/observation.service.js";
+import type { ToolCategory } from "../tools/base/tool.interface.js";
 
 export class AgentService {
   private planner = new PlannerService();
@@ -106,7 +107,7 @@ ${executionHistory}
           workspace,
           sessionContext,
           lastObservation,
-          lastReflection
+          lastReflection,
         );
         this.emit(emitter, {
           type: "plan-created",
@@ -115,13 +116,13 @@ ${executionHistory}
         const result = await this.executor.execute(execution.id, plan, emitter);
         lastObservation = result.observation;
 
-        lastReflection=this.observationService.createReflection(
-          result.observation
-        )
+        lastReflection = this.observationService.createReflection(
+          result.observation,
+        );
         this.emit(emitter, {
-  type: "reflection",
-  reflection: lastReflection,
-});
+          type: "reflection",
+          reflection: lastReflection,
+        });
         const verification = this.verify(plan, result.observation);
         const retry = this.shouldRetry(verification, result.observation, i);
 
@@ -237,28 +238,28 @@ ${executionHistory}
     emitter?.emit("event", event);
   }
 
-async getSession() {
-  return this.executor.getSession().getSnapshot();
-}
-  async getWorkspace(){
+  async getSession() {
+    return this.executor.getSession().getSnapshot();
+  }
+  async getWorkspace() {
     return this.workspaceService.analyze();
   }
-  async createPlan(message:string):Promise<Plan>{
-    const workspace=await this.workspaceService.analyze();
+  async createPlan(message: string): Promise<Plan> {
+    const workspace = await this.workspaceService.analyze();
 
-    const history="";
+    const history = "";
 
-    const sessionContext=this.buildSessionContext();
+    const sessionContext = this.buildSessionContext();
 
-    const plan=await this.planner.createPlan(
+    const plan = await this.planner.createPlan(
       message,
       history,
       workspace,
-      sessionContext
+      sessionContext,
     );
 
-    this.validator.validate(plan)
-     return plan
+    this.validator.validate(plan);
+    return plan;
   }
 
   private appendObservation(history: string, observation: Observation): string {
@@ -284,10 +285,10 @@ ${observation.errors.join("\n")}
 `
     );
   }
-private buildSessionContext(): string {
-  const session = this.executor.getSession();
+  private buildSessionContext(): string {
+    const session = this.executor.getSession();
 
-  return `
+    return `
 ==============================
 Execution Memory
 ==============================
@@ -309,7 +310,10 @@ ${session.getRetryCount()}
 Executed Commands:
 ${
   session.getExecutedCommands().length
-    ? session.getExecutedCommands().map(cmd => `- ${cmd}`).join("\n")
+    ? session
+        .getExecutedCommands()
+        .map((cmd) => `- ${cmd}`)
+        .join("\n")
     : "None"
 }
 
@@ -318,7 +322,10 @@ ${
 Successful Commands:
 ${
   session.getSuccessfulCommands().length
-    ? session.getSuccessfulCommands().map(cmd => `- ${cmd}`).join("\n")
+    ? session
+        .getSuccessfulCommands()
+        .map((cmd) => `- ${cmd}`)
+        .join("\n")
     : "None"
 }
 
@@ -327,7 +334,10 @@ ${
 Failed Commands:
 ${
   session.getFailedCommands().length
-    ? session.getFailedCommands().map(cmd => `- ${cmd}`).join("\n")
+    ? session
+        .getFailedCommands()
+        .map((cmd) => `- ${cmd}`)
+        .join("\n")
     : "None"
 }
 
@@ -336,7 +346,10 @@ ${
 Modified Files:
 ${
   session.getModifiedFiles().length
-    ? session.getModifiedFiles().map(file => `- ${file}`).join("\n")
+    ? session
+        .getModifiedFiles()
+        .map((file) => `- ${file}`)
+        .join("\n")
     : "None"
 }
 
@@ -345,7 +358,10 @@ ${
 Visited Directories:
 ${
   session.getVisitedDirectories().length
-    ? session.getVisitedDirectories().map(dir => `- ${dir}`).join("\n")
+    ? session
+        .getVisitedDirectories()
+        .map((dir) => `- ${dir}`)
+        .join("\n")
     : "None"
 }
 
@@ -354,11 +370,14 @@ ${
 Recovery History:
 ${
   session.getRecoveryHistory().length
-    ? session.getRecoveryHistory().map(item => `- ${item}`).join("\n")
+    ? session
+        .getRecoveryHistory()
+        .map((item) => `- ${item}`)
+        .join("\n")
     : "None"
 }
 `;
-}
+  }
   private verify(plan: Plan, observation: Observation) {
     return this.verifier.verify(plan, observation);
   }
@@ -424,45 +443,73 @@ ${
     }
   }
   async executePlan(
-  plan: Plan,
-  emitter?: AgentEventEmitter,
-): Promise<ExecutionResult> {
-  // Validate plan
-  this.validator.validate(plan);
+    plan: Plan,
+    emitter?: AgentEventEmitter,
+  ): Promise<ExecutionResult> {
+    // Validate plan
+    this.validator.validate(plan);
 
-  // Create a conversation for manual execution
-  const conversation = await this.conversationRepository.create(
-    "Manual Plan Execution",
-  );
+    // Create a conversation for manual execution
+    const conversation = await this.conversationRepository.create(
+      "Manual Plan Execution",
+    );
 
-  // Create execution
-  const execution = await this.executionRepository.create(
-    conversation.id,
-    "Manual Plan Execution",
-  );
+    // Create execution
+    const execution = await this.executionRepository.create(
+      conversation.id,
+      "Manual Plan Execution",
+    );
 
-  // Execute plan
-  const result = await this.executor.execute(
-    execution.id,
-    plan,
-    emitter,
-  );
+    // Execute plan
+    const result = await this.executor.execute(execution.id, plan, emitter);
 
-  // Update execution status
-  await this.executionRepository.updateStatus(
-    execution.id,
-    result.success
-      ? ExecutionStatus.SUCCESS
-      : ExecutionStatus.FAILED,
-  );
+    // Update execution status
+    await this.executionRepository.updateStatus(
+      execution.id,
+      result.success ? ExecutionStatus.SUCCESS : ExecutionStatus.FAILED,
+    );
 
-  // Save assistant message
-  await this.messageRepository.create(
-    conversation.id,
-    Role.ASSISTANT,
-    result.output,
-  );
+    // Save assistant message
+    await this.messageRepository.create(
+      conversation.id,
+      Role.ASSISTANT,
+      result.output,
+    );
 
-  return result;
+    return result;
+  }
+  // Get all tools
+getTools() {
+  return this.executor
+    .getToolService()
+    .getAll();
+}
+
+// Get one tool
+getTool(name: string) {
+  return this.executor
+    .getToolService()
+    .get(name);
+}
+
+// Enable tool
+enableTool(name: string) {
+  return this.executor
+    .getToolService()
+    .enable(name);
+}
+
+// Disable tool
+disableTool(name: string) {
+  return this.executor
+    .getToolService()
+    .disable(name);
+}
+
+// Get tools by category
+getToolsByCategory(category: ToolCategory) {
+  return this.executor
+    .getToolService()
+    .getByCategory(category);
 }
 }

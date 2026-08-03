@@ -1,20 +1,18 @@
-import type { Tool, ToolInput, ToolOutput } from "../base/tool.interface.js";
+import type { Tool, ToolInfo, ToolInput, ToolOutput } from "../base/tool.interface.js";
 import { promises as fs } from "fs";
 import path from "node:path";
 import { SessionState } from "../../session/session.state.js";
 
 export class FileTool implements Tool {
   name = "file";
-readonly info = {
+readonly info:ToolInfo = {
   name: "file",
   displayName: "File",
-
   description: "Read, write and edit files",
 
   category: "filesystem",
 
   version: "1.0.0",
-
   author: "NodeBase",
 
   enabled: true,
@@ -25,7 +23,7 @@ readonly info = {
     "edit",
     "delete",
   ],
-} as const;
+};
   description = "Create, read and write files.";
   constructor(private session: SessionState) {}
 

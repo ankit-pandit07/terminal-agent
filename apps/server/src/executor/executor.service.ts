@@ -13,6 +13,7 @@ import { ToolExecutionRepository } from "../repositories/tool-execution.reposito
 import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { ObservationService } from "../observation/observation.service.js";
 import type { ToolMetadata } from "../tools/base/tool.interface.js";
+import { ToolService } from "../tools/tool.service.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -27,6 +28,7 @@ export class ExecutorService implements Executor {
   private observationService = new ObservationService();
 
   private toolExecutionRepository = new ToolExecutionRepository();
+  private toolService=new ToolService(this.registry);
 
   constructor() {
     this.registry.register(new EchoTool());
@@ -247,4 +249,7 @@ export class ExecutorService implements Executor {
   getSession(): SessionState {
     return this.session;
   }
+  getToolService(): ToolService {
+    return this.toolService;
+}
 }

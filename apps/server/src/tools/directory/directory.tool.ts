@@ -1,9 +1,27 @@
-import type { Tool, ToolInput, ToolOutput } from "../base/tool.interface.js";
+import type { Tool, ToolInfo, ToolInput, ToolOutput } from "../base/tool.interface.js";
 import path from "path";
 import { promises as fs } from "fs";
 import type { SessionState } from "../../session/session.state.js";
 export class DirectoryTool implements Tool {
   name = "directory";
+  readonly info:ToolInfo = {
+  name: "directory",
+  displayName: "Directory",
+  description: "Create and manage directories",
+
+  category: "filesystem",
+
+  version: "1.0.0",
+  author: "NodeBase",
+
+  enabled: true,
+
+  capabilities: [
+    "create",
+    "delete",
+    "list",
+  ],
+};
   description = "Browse directories and list files.";
 
   constructor(private session: SessionState) {}

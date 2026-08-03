@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { AgentService } from "../agent/agent.service.js";
 import { AgentEventEmitter } from "../events/agent-event-emitter.js";
-import { z } from "zod";
+import { success, z } from "zod";
 import type { Plan } from "../planner/planner.js";
-import type { ToolInput } from "../tools/base/tool.interface.js";
+import type { ToolCategory, ToolInput } from "../tools/base/tool.interface.js";
 
 const router = Router();
 
@@ -187,4 +187,71 @@ router.post("/stream", async (req, res, next) => {
   }
 });
 
+router.get("/tools",(_,res)=>{
+  const tools = agent.getTools();
+
+  res.json({
+    success:true,
+    total:tools.length,
+    tools
+  })
+})
+
+router.get("/tools/:name",(req,res)=>{
+  const tool = agent.getTool(req.params.name);
+
+  if(!tool){
+    return res.status(404).json({
+      success:false,
+      message:"Tool not found",
+    })
+  }
+  res.json({
+    success:true,
+    tool
+  })
+});
+
+router.patch("/tools/:name/enable",(req,res)=>{
+  const success=agent.enableTool(req.params.name);
+
+  if(!success){
+    return res.status(404).json({
+      success:false,
+      message:"Tool not found."
+    })
+  }
+
+  res.json({
+    success:true,
+    message:"Tool enabled"
+  })
+})
+router.patch("/tools/:name/disable", (req, res) => {
+  const success = agent.disableTool(req.params.name);
+
+  if (!success) {
+    return res.status(404).json({
+      success: false,
+      message: "Tool not found.",
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Tool disabled.",
+  });
+});
+
+router.get("/tools/category/:category",(req,res)=>{
+  const tools=agent.getToolsByCategory(
+    req.params.category as ToolCategory
+  );
+
+  res.json({
+    success:true,
+    total:tools.length,
+    tools,
+  })
+})
 export default router;

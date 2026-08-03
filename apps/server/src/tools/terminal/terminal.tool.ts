@@ -1,14 +1,15 @@
 import { execa } from "execa";
-import type { Tool, ToolInput, ToolOutput } from "../base/tool.interface.js";
+import type { Tool, ToolInfo, ToolInput, ToolOutput } from "../base/tool.interface.js";
 import path from "node:path";
 import { SessionState } from "../../session/session.state.js";
 
 export class TerminalTool implements Tool {
   name = "terminal";
-readonly info = {
+readonly info:ToolInfo = {
   name: "terminal",
   displayName: "Terminal",
   description: "Execute terminal commands",
+
   category: "system",
 
   version: "1.0.0",
@@ -18,10 +19,10 @@ readonly info = {
 
   capabilities: [
     "shell",
-    "command",
-    "process",
+    "command-execution",
+    "process-management",
   ],
-} as const;
+};
   description = "Execute terminal commands.";
   constructor(private session: SessionState) {}
   async execute(input: ToolInput): Promise<ToolOutput> {
