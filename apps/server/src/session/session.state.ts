@@ -130,14 +130,18 @@ export class SessionState {
     this.visitedDirectories=[];
     this.recoveryHistory=[];
   }
-  getSnapshot() {
-    return {
-      currentDirectory: this.currentDirectory,
-      lastTool: this.lastTool,
-      lastError: this.lastError,
-      retryCount: this.retryCount,
-      executedCommands: [...this.executedCommands],
-      modifiedFiles: [...this.modifiedFiles],
-    };
-  }
+getSnapshot() {
+  return {
+    currentDirectory: this.currentDirectory,
+    lastTool: this.lastTool ?? null,
+    lastError: this.lastError ?? null,
+    retryCount: this.retryCount,
+    executedCommands: [...this.executedCommands],
+    successfulCommands: [...this.successfulCommnads],
+    failedCommands: [...this.failedCommands],
+    visitedDirectories: [...this.visitedDirectories],
+    modifiedFiles: [...this.modifiedFiles],
+    recoveryHistory: [...this.recoveryHistory],
+  };
+}
 }

@@ -237,6 +237,30 @@ ${executionHistory}
     emitter?.emit("event", event);
   }
 
+async getSession() {
+  return this.executor.getSession().getSnapshot();
+}
+  async getWorkspace(){
+    return this.workspaceService.analyze();
+  }
+  async createPlan(message:string):Promise<Plan>{
+    const workspace=await this.workspaceService.analyze();
+
+    const history="";
+
+    const sessionContext=this.buildSessionContext();
+
+    const plan=await this.planner.createPlan(
+      message,
+      history,
+      workspace,
+      sessionContext
+    );
+
+    this.validator.validate(plan)
+     return plan
+  }
+
   private appendObservation(history: string, observation: Observation): string {
     return (
       history +
@@ -399,4 +423,46 @@ ${
         return false;
     }
   }
+  async executePlan(
+  plan: Plan,
+  emitter?: AgentEventEmitter,
+): Promise<ExecutionResult> {
+  // Validate plan
+  this.validator.validate(plan);
+
+  // Create a conversation for manual execution
+  const conversation = await this.conversationRepository.create(
+    "Manual Plan Execution",
+  );
+
+  // Create execution
+  const execution = await this.executionRepository.create(
+    conversation.id,
+    "Manual Plan Execution",
+  );
+
+  // Execute plan
+  const result = await this.executor.execute(
+    execution.id,
+    plan,
+    emitter,
+  );
+
+  // Update execution status
+  await this.executionRepository.updateStatus(
+    execution.id,
+    result.success
+      ? ExecutionStatus.SUCCESS
+      : ExecutionStatus.FAILED,
+  );
+
+  // Save assistant message
+  await this.messageRepository.create(
+    conversation.id,
+    Role.ASSISTANT,
+    result.output,
+  );
+
+  return result;
+}
 }

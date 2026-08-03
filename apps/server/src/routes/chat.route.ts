@@ -1,27 +1,44 @@
 import { Router } from "express";
 import { AgentService } from "../agent/agent.service.js";
 import { AgentEventEmitter } from "../events/agent-event-emitter.js";
-import {z} from "zod";
+import { z } from "zod";
+import type { Plan } from "../planner/planner.js";
+import type { ToolInput } from "../tools/base/tool.interface.js";
 
 const router = Router();
 
 const agent = new AgentService();
 
 const chatSchema = z.object({
-  message:z.string().trim().min(1, "Message is required.").max(5000, "Message is to long."),
-  conversationId:z.string().optional(),
-})
+  message: z
+    .string()
+    .trim()
+    .min(1, "Message is required.")
+    .max(5000, "Message is to long."),
+  conversationId: z.string().optional(),
+});
+
+const executeSchema = z.object({
+  plan: z.object({
+    steps: z.array(
+      z.object({
+        tool: z.string(),
+        input: z.record(z.string(), z.unknown()),
+        reason: z.string().optional(),
+        priority: z.number().optional(),
+      }),
+    ),
+  }),
+});
 
 router.post("/", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
 
     const result = await agent.process({
-  message: body.message,
-  ...(body.conversationId
-    ? { conversationId: body.conversationId }
-    : {}),
-});
+      message: body.message,
+      ...(body.conversationId ? { conversationId: body.conversationId } : {}),
+    });
     res.json(result);
   } catch (error) {
     next(error);
@@ -55,9 +72,7 @@ router.get("/conversations/:id", async (req, res, next) => {
 
 router.get("/executions/:conversationId", async (req, res, next) => {
   try {
-    const executions = await agent.getExecutions(
-      req.params.conversationId,
-    );
+    const executions = await agent.getExecutions(req.params.conversationId);
 
     res.json(executions);
   } catch (error) {
@@ -65,6 +80,75 @@ router.get("/executions/:conversationId", async (req, res, next) => {
   }
 });
 
+router.get("/session", async (_, res, next) => {
+  try {
+    const session = await agent.getSession();
+    console.log(session);
+    res.json({
+      success: true,
+      session,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/workspace", async (_, res, next) => {
+  try {
+    const workspace = await agent.getWorkspace();
+
+    res.json({
+      success: true,
+      workspace,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/plan", async (req, res, next) => {
+  try {
+    const body = chatSchema.parse(req.body);
+    const plan = await agent.createPlan(body.message);
+
+    res.json({
+      success: true,
+      plan,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/execute", async (req, res, next) => {
+  try {
+    const body = executeSchema.parse(req.body);
+
+    const plan: Plan = {
+      steps: body.plan.steps.map((step) => ({
+        tool: step.tool,
+        input: step.input as ToolInput,
+
+        ...(step.reason !== undefined
+          ? { reason: step.reason }
+          : {}),
+
+        ...(step.priority !== undefined
+          ? { priority: step.priority }
+          : {}),
+      })),
+    };
+
+    const result = await agent.executePlan(plan);
+
+    res.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 router.post("/stream", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
@@ -83,21 +167,18 @@ router.post("/stream", async (req, res, next) => {
     });
 
     const result = await agent.process(
-     {
-    message: body.message,
-    ...(body.conversationId
-      ? { conversationId: body.conversationId }
-      : {}),
-  },
-  emitter,
+      {
+        message: body.message,
+        ...(body.conversationId ? { conversationId: body.conversationId } : {}),
+      },
+      emitter,
     );
     res.write(`event: done\n`);
     res.write(`data: ${JSON.stringify(result)}\n\n`);
 
     res.end();
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : "Unknown error";
 
     res.write(`event: error\n`);
     res.write(`data: ${JSON.stringify({ message })}\n\n`);
