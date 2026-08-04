@@ -1,10 +1,11 @@
 import { StreamEvent } from "../types/stream-event.js";
+import { StreamRequest } from "./stream.types.js";
 
 export class StreamService {
   private readonly baseUrl = "http://localhost:5000";
 
   async stream(
-    message: string,
+    request:StreamRequest,
     onEvent: (event: StreamEvent) => void,
   ): Promise<void> {
     const response = await fetch(`${this.baseUrl}/chat/stream`, {
@@ -12,9 +13,9 @@ export class StreamService {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        message,
-      }),
+      body: JSON.stringify(
+        request
+      ),
     });
 
     if (!response.ok) {
@@ -63,7 +64,10 @@ export class StreamService {
 
         try {
           const payload = JSON.parse(eventData);
-          onEvent(payload as StreamEvent);
+          onEvent({
+    type:eventType,
+    ...payload,
+} as StreamEvent);
 
           if (eventType === "done") {
             return;

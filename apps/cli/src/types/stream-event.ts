@@ -38,6 +38,13 @@ export interface ErrorEvent{
     message:string;
 }
 
+export interface DoneEvent {
+  type: "done";
+  success: boolean;
+  response: string;
+  conversationId: string;
+}
+
 export type StreamEvent = 
 | PlanningEvent
 | PlanCreatedEvent
@@ -46,3 +53,4 @@ export type StreamEvent =
 | GoalEvent
 | CompletedEvent
 | ErrorEvent
+| DoneEvent

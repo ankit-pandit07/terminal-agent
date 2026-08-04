@@ -5,29 +5,43 @@ import { StreamService } from "./services/stream.service.js";
 import { StreamRenderer } from "./renderer/stream.renderer.js";
 import { InteractiveShell } from "./interactive/shell.js";
 import { printBanner } from "./utils/banner.js";
+import { CommandRouter } from "./commands/command.router.js";
+import { ConversationManager } from "./conversation/conversation.manager.js";
 
 export function startCLI() {
   const program = new Command();
 
   const stream = new StreamService();
   const renderer = new StreamRenderer();
-
+  const router = new CommandRouter();
+  const manager = new ConversationManager();
   program
     .name("nodebase")
     .description("NodeBase AI Terminal Agent")
     .version("1.0.0")
     .argument("[message]", "Message for AI Agent")
     .action(async (message?: string) => {
-
       // Single Command Mode
       if (message) {
         const spinner = ora("Connecting to NodeBase AI...").start();
 
         try {
-          await stream.stream(message, (event) => {
-            spinner.stop();
-            renderer.render(event);
-          });
+          await stream.stream(
+            {
+              message:message,
+              conversationId: manager.getConversationId(),
+            },
+            (event) => {
+              spinner.stop();
+
+              if (event.type === "done") {
+                manager.setConversationId(event.conversationId);
+                return;
+              }
+
+              renderer.render(event);
+            },
+          );
         } catch (error) {
           spinner.fail("Request failed");
 
@@ -57,13 +71,30 @@ export function startCLI() {
           break;
         }
 
+        const handled = await router.handle(input);
+        if (handled) {
+          console.log();
+          continue;
+        }
         const spinner = ora("Connecting to NodeBase AI...").start();
 
         try {
-          await stream.stream(input, (event) => {
-            spinner.stop();
-            renderer.render(event);
-          });
+          await stream.stream(
+            {
+              message:input,
+              conversationId: manager.getConversationId(),
+            },
+            (event) => {
+              spinner.stop();
+
+              if (event.type === "done") {
+                manager.setConversationId(event.conversationId);
+                return;
+              }
+
+              renderer.render(event);
+            },
+          );
         } catch (error) {
           spinner.fail("Request failed");
 
