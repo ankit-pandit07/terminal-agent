@@ -2,11 +2,14 @@ import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import { AgentService } from "./services/agent.service.js";
+import { StreamService } from "./services/stream.service.js";
+import { StreamRenderer } from "./renderer/stream.renderer.js";
 
 export function startCLI() {
   const program = new Command();
 
-  const agent = new AgentService();
+  const stream = new StreamService();
+  const renderer = new StreamRenderer();
 
   program
     .name("nodebase")
@@ -24,15 +27,11 @@ export function startCLI() {
       const spinner = ora("Thinking...").start();
 
       try {
-        const result = await agent.chat(message);
-console.log("CLI RESULT:");
-console.log(result);
-        spinner.succeed("Done");
+        await stream.stream(message, (event) => {
+          spinner.stop();
 
-        console.log();
-        console.log(chalk.cyan("AI Response"));
-        console.log("----------------------------");
-        console.log(result.response);
+          renderer.render(event);
+        });
       } catch (error) {
         spinner.fail("Request failed");
 
