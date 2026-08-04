@@ -1,2 +1,2 @@
-export * from "./agent.js"
-export * from "./agent.service.js"
+export { AgentService } from "./agent.service.js";
+export type { AgentRequest, AgentResponse, AgentEventEmitter } from "./agent.js";
