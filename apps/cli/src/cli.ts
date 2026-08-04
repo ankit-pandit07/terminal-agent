@@ -1,9 +1,10 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { AgentService } from "./services/agent.service.js";
 import { StreamService } from "./services/stream.service.js";
 import { StreamRenderer } from "./renderer/stream.renderer.js";
+import { InteractiveShell } from "./interactive/shell.js";
+import { printBanner } from "./utils/banner.js";
 
 export function startCLI() {
   const program = new Command();
@@ -14,30 +15,64 @@ export function startCLI() {
   program
     .name("nodebase")
     .description("NodeBase AI Terminal Agent")
-    .version("1.0.0");
-
-  program
+    .version("1.0.0")
     .argument("[message]", "Message for AI Agent")
-    .action(async (message) => {
-      if (!message) {
-        console.log(chalk.yellow("Please provide a message."));
+    .action(async (message?: string) => {
+
+      // Single Command Mode
+      if (message) {
+        const spinner = ora("Connecting to NodeBase AI...").start();
+
+        try {
+          await stream.stream(message, (event) => {
+            spinner.stop();
+            renderer.render(event);
+          });
+        } catch (error) {
+          spinner.fail("Request failed");
+
+          if (error instanceof Error) {
+            console.log(chalk.red(error.message));
+          }
+        }
+
         return;
       }
 
-      const spinner = ora("Thinking...").start();
+      // Interactive Mode
+      printBanner();
 
-      try {
-        await stream.stream(message, (event) => {
-          spinner.stop();
+      const shell = new InteractiveShell();
 
-          renderer.render(event);
-        });
-      } catch (error) {
-        spinner.fail("Request failed");
+      while (true) {
+        const input = await shell.ask();
 
-        if (error instanceof Error) {
-          console.log(chalk.red(error.message));
+        if (!input) {
+          continue;
         }
+
+        if (input.toLowerCase() === "exit") {
+          console.log(chalk.green("\n Goodbye!\n"));
+          shell.close();
+          break;
+        }
+
+        const spinner = ora("Connecting to NodeBase AI...").start();
+
+        try {
+          await stream.stream(input, (event) => {
+            spinner.stop();
+            renderer.render(event);
+          });
+        } catch (error) {
+          spinner.fail("Request failed");
+
+          if (error instanceof Error) {
+            console.log(chalk.red(error.message));
+          }
+        }
+
+        console.log();
       }
     });
 
