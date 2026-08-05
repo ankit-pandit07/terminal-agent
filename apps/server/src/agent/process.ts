@@ -16,7 +16,7 @@ import { appendObservation, emit, shouldRetry } from "./helper.js";
 import { failExecution, finishExecution } from "./execution.js";
 import { buildSessionContext } from "./session.js";
 import { GoalService } from "../goal/goal.service.js";
-import { ConversationContextService } from "../context/conversation-context.service.js";
+import { ContextRetriever } from "../context/retriever/context.retriever.js";
 
 
 // Services - Initialized once and shared
@@ -26,6 +26,7 @@ const messageRepository = new MessageRepository();
 const executionRepository = new ExecutionRepository();
 const contextService = new ContextService();
 const workspaceService = new WorkspaceService();
+const contextRetriever = new ContextRetriever();
 const planner = new PlannerService();
 
 const verifier = new VerificationService();
@@ -93,11 +94,14 @@ ${executionHistory}
         type: "planning",
         message: `Planning iteration ${i + 1}...`,
       });
-
+const retrievedContext = await contextRetriever.retrieve(
+    request.message,
+);
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,
         workspace,
+         retrievedContext,
         sessionContext,
         lastObservation,
         lastReflection,

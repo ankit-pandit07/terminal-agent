@@ -1,3 +1,4 @@
+import type { RetrievedContext } from "../context/retriever/context.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
 import type { DependencyAnalysis, ExecutionStrategy, GoalAnalysis, PriorityAnalysis, RiskAnalysis } from "../planner/planner.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
@@ -53,7 +54,9 @@ export function buildPlannerPrompt(
     risk?: RiskAnalysis,
     priority?: PriorityAnalysis,
     strategy?: ExecutionStrategy,
-    reflection?:Reflection
+    reflection?:Reflection,
+    retrievedContext?: RetrievedContext,
+ 
 ): string {
  
   const tools = toolDefinitions
@@ -336,6 +339,20 @@ Optional Steps:
 ${priority?.optionalSteps.length
     ? priority.optionalSteps.map(step => `- ${step}`).join("\n")
     : "None"}
+
+    Relevant Workspace Context
+
+Files
+
+${retrievedContext?.relevantFiles.join("\n")}
+
+Symbols
+
+${retrievedContext?.relevantSymbols.join("\n")}
+
+Calls
+
+${retrievedContext?.relevantCalls.join("\n")}
 
 Rules:
 - Understand why the previous step failed.

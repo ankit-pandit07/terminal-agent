@@ -12,6 +12,7 @@ import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
 
 import type { WorkspaceInfo } from "../workspace/workspace.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
+import type { RetrievedContext } from "../context/retriever/context.types.js";
 
 export class PlannerService {
   private llm = LLMFactory.create();
@@ -171,6 +172,7 @@ ${Object.entries(workspace.scripts)
     message: string,
     history: string,
     workspace: WorkspaceInfo,
+    retrievedContext: RetrievedContext,
     sessionContext: string,
     observation?: Observation,
     reflection?: Reflection,
@@ -193,6 +195,7 @@ ${Object.entries(workspace.scripts)
       priority,
       executionStrategy,
       reflection,
+      retrievedContext,
     );
 
     const response = await this.llm.generate({
