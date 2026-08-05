@@ -14,7 +14,7 @@ export interface ToolStartEvent {
 }
 
 export interface ToolCompleteEvent {
-    type:"tool-completed";
+    type:"tool-complete";
     tool:string;
     success:boolean;
 }

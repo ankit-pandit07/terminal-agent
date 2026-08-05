@@ -13,8 +13,9 @@ export function startCLI() {
 
   const stream = new StreamService();
   const renderer = new StreamRenderer();
-  const router = new CommandRouter();
   const manager = new ConversationManager();
+  const router = new CommandRouter(manager);
+
   program
     .name("nodebase")
     .description("NodeBase AI Terminal Agent")
@@ -28,7 +29,7 @@ export function startCLI() {
         try {
           await stream.stream(
             {
-              message:message,
+              message: message,
               conversationId: manager.getConversationId(),
             },
             (event) => {
@@ -36,6 +37,7 @@ export function startCLI() {
 
               if (event.type === "done") {
                 manager.setConversationId(event.conversationId);
+
                 return;
               }
 
@@ -81,7 +83,7 @@ export function startCLI() {
         try {
           await stream.stream(
             {
-              message:input,
+              message: input,
               conversationId: manager.getConversationId(),
             },
             (event) => {

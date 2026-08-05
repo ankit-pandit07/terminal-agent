@@ -1,27 +1,39 @@
+import { ConversationStorage } from "./conversation.storage.js";
 import { ConversationSession } from "./conversation.types.js";
 
 export class ConversationManager {
-    private session:ConversationSession={};
+  private storage = new ConversationStorage();
 
-    getConversationId(): string | undefined {
-        return this.session.conversationId
-    }
+  private session: ConversationSession;
 
-    setConversationId(id:string): void {
-        this.session.conversationId=id;
-    }
+  constructor() {
+    this.session = this.storage.load();
+  }
 
-    hasConversation(): boolean {
-        return this.session.conversationId !== undefined;
-    }
+  getConversationId(): string | undefined {
+    return this.session.conversationId;
+  }
 
-    clear(): void {
-        this.session={};
-    }
+  setConversationId(id: string): void {
+    this.session.conversationId = id;
 
-    getSession(): ConversationSession{
-        return {
-            ...this.session
-        }
-    }
+    // Persist immediately
+    this.storage.save(this.session);
+  }
+
+  hasConversation(): boolean {
+    return this.session.conversationId !== undefined;
+  }
+
+  clear(): void {
+    this.session = {};
+
+    this.storage.clear();
+  }
+
+  getSession(): ConversationSession {
+    return {
+      ...this.session,
+    };
+  }
 }

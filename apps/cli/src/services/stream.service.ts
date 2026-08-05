@@ -31,51 +31,62 @@ export class StreamService {
 
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
+while (true) {
+  const { done, value } = await reader.read();
 
-      if (done) break;
+  if (value) {
+    buffer += decoder.decode(value, {
+      stream: !done,
+    });
+  }
 
-      buffer += decoder.decode(value, {
-        stream: true,
-      });
+  const events = buffer.split("\n\n");
 
-      const events = buffer.split("\n\n");
+  buffer = events.pop() ?? "";
 
-      buffer = events.pop() ?? "";
+  for (const rawEvent of events) {
+    const lines = rawEvent.split("\n");
 
-      for (const rawEvent of events) {
-       const lines = rawEvent.split("\n");
+    let eventType = "";
+    let eventData = "";
 
-        let eventType = "";
-        let eventData = "";
+    for (const line of lines) {
+      if (line.startsWith("event:")) {
+        eventType = line.replace("event:", "").trim();
+      }
 
-        for (const line of lines) {
-          if (line.startsWith("event:")) {
-            eventType = line.replace("event:", "").trim();
-          }
-
-          if (line.startsWith("data:")) {
-            eventData = line.replace("data:", "").trim();
-          }
-        }
-
-        if (!eventType || !eventData) continue;
-
-        try {
-          const payload = JSON.parse(eventData);
-          onEvent({
-    type:eventType,
-    ...payload,
-} as StreamEvent);
-
-          if (eventType === "done") {
-            return;
-          }
-        } catch (error) {
-          console.error("SSE Parse Error:", error);
-        }
+      if (line.startsWith("data:")) {
+        eventData = line.replace("data:", "").trim();
       }
     }
-  }
+
+    if (!eventType || !eventData) {
+      continue;
+    }
+
+    try {
+      const payload = JSON.parse(eventData);
+
+   const event = {
+    type: eventType,
+    ...payload,
+};
+
+
+onEvent(event as StreamEvent);
+
+if (eventType === "done") {
+    return;
 }
+    } catch (error) {
+      console.error("SSE Parse Error:", error);
+    }
+  }
+
+  if (done) {
+    break;
+  }
+}}
+  }
+
+      

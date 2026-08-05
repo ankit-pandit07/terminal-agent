@@ -20,7 +20,7 @@ export class StreamRenderer {
         console.log(chalk.yellow(`Running ${event.tool}...`));
         break;
 
-      case "tool-completed":
+      case "tool-complete":
         if (event.success) {
           console.log(chalk.green(`${event.tool} completed`));
         } else {
