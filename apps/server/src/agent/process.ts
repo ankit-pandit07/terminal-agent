@@ -9,25 +9,28 @@ import { ExecutionRepository } from "../repositories/execution.repository.js";
 import { ContextService } from "../context/context.service.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
 import { PlannerService } from "../planner/planner.service.js";
-import { ExecutorService } from "../executor/executor.service.js";
+import { executor } from "../executor/executor.instance.js";
 import { VerificationService } from "../verification/verification.service.js";
 import { ObservationService } from "../observation/observation.service.js";
 import { appendObservation, emit, shouldRetry } from "./helper.js";
 import { failExecution, finishExecution } from "./execution.js";
 import { buildSessionContext } from "./session.js";
-
+import { GoalService } from "../goal/goal.service.js";
+import { ConversationContextService } from "../context/conversation-context.service.js";
 
 
 // Services - Initialized once and shared
+
 const conversationRepository = new ConversationRepository();
 const messageRepository = new MessageRepository();
 const executionRepository = new ExecutionRepository();
 const contextService = new ContextService();
 const workspaceService = new WorkspaceService();
 const planner = new PlannerService();
-const executor = new ExecutorService();
+
 const verifier = new VerificationService();
 const observationService = new ObservationService();
+const goalService=new GoalService();
 const MAX_ITERATIONS = 5;
 
 export async function processAgentRequest(
@@ -55,12 +58,11 @@ export async function processAgentRequest(
     }
 
     // Save User Message
-    await messageRepository.create(
-      conversation.id,
-      Role.USER,
-      request.message,
-    );
-
+ await messageRepository.create(
+  conversation.id,
+  Role.USER,
+  request.message,
+);
     // Create Execution
     execution = await executionRepository.create(
       conversation.id,
@@ -68,8 +70,7 @@ export async function processAgentRequest(
     );
 
     // Build Context
-    const context = await contextService.buildContext(conversation.id);
-
+   
     const workspace = await workspaceService.analyze();
 
     let executionHistory = "";
@@ -77,6 +78,7 @@ export async function processAgentRequest(
     let lastReflection: Reflection | undefined;
     
     for (let i = 0; i < MAX_ITERATIONS; i++) {
+       const context = await contextService.buildContext(conversation.id);
       const sessionContext = buildSessionContext();
       const plannerHistory = `
 Conversation Context:
@@ -109,6 +111,27 @@ ${executionHistory}
       const result = await executor.execute(execution.id, plan, emitter);
       lastObservation = result.observation;
 
+      const goal= await goalService.evaluate(
+        request.message,
+        result.output,
+        result.observation
+      )
+      emit(emitter,{
+        type:"goal",
+        goal
+      })
+
+      if(goal.completed){
+        emit(emitter,{
+          type:"completed",
+          response:result.output
+        });
+        return finishExecution(
+          execution.id,
+          conversation.id,
+          result
+        )
+      }
       lastReflection = observationService.createReflection(
         result.observation,
       );

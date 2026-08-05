@@ -207,8 +207,64 @@ ${goal?.constraints.length
 Expected Outcome:
 ${goal?.expectedOutcome ?? "Unknown"}
 
-Conversation History:
+Conversation Understanding Rules
+
+1. Conversation History contains previous user requests and assistant responses.
+
+2. Always use the Conversation History to resolve references.
+
+3. If the user says:
+- it
+- that
+- there
+- previous file
+- same folder
+- this file
+- that folder
+
+infer the correct target from the latest conversation.
+
+4. Never ignore previous assistant responses.
+
+5. Continue working on previously created files unless the user explicitly asks to create a new one.
+
+6. Prefer modifying an existing file over creating a new one when the user refers to "it".
+
+7. If the previous assistant created a file, and the next user message refers to "it", assume "it" means that file.
+
+Example
+
+Conversation History
+
+User:
+Create hello.txt
+
+Assistant:
+File created: hello.txt
+
+Current User Message:
+Write Hello World inside it
+
+Correct Plan
+
+{
+  "steps": [
+    {
+      "tool": "file",
+      "input": {
+        "action": "edit",
+        "path": "hello.txt",
+        "instruction": "Write Hello World"
+      }
+    }
+  ]
+}
+  
+Conversation Context (Most Important)
+
 ${history}
+
+The Conversation Context is the primary source of truth for resolving references such as "it", "that", "same file", "there", and previous requests.
 
 Project Context:
 ${projectContext || "Unknown"}
@@ -482,6 +538,14 @@ Correct Output:
     }
   ]
 }
+
+Before generating the plan:
+
+- Read the Conversation Context.
+- Resolve all references ("it", "that", "there", etc.).
+- Determine whether the user is referring to an existing file, folder, or previous action.
+- Only then create the execution plan.
+
 Current User Message:
 ${message}
 `;

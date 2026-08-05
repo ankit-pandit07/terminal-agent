@@ -1,6 +1,5 @@
-import { ExecutorService } from "../executor/executor.service.js";
+import { executor } from "../executor/executor.instance.js";
 
-const executor = new ExecutorService();
 
 export async function getSession() {
   return executor.getSession().getSnapshot();

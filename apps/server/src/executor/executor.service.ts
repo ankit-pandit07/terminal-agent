@@ -158,11 +158,7 @@ export class ExecutorService implements Executor {
         if (step.tool === "terminal") {
           const command = String(step.input.command);
           this.session.addExecutedCommand(command);
-          emitter?.emit("event", {
-            type: "tool-complete",
-            tool: "terminal",
-            success: false,
-          });
+         
           if (!this.guard.isSafe(command)) {
             return this.failure(
               "terminal",
@@ -239,7 +235,7 @@ export class ExecutorService implements Executor {
     } catch (error) {
       emitter?.emit("event", {
         type: "tool-complete",
-        tool: "file",
+        tool: "executor",
         success: false,
       });
       const message = error instanceof Error ? error.message : "Unknown error";

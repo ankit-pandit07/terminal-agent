@@ -4,6 +4,7 @@ import { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { success, z } from "zod";
 import type { Plan } from "../planner/planner.js";
 import type { ToolCategory, ToolInput } from "../tools/base/tool.interface.js";
+import { history } from "../conversation/conversation.controller.js";
 
 const router = Router();
 
@@ -187,5 +188,14 @@ router.post("/stream", async (req, res, next) => {
   }
 });
 
+router.get("/history", async (_req, res, next) => {
+  try {
+    const result = await history();
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;
