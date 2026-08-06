@@ -15,6 +15,7 @@ export class TaskClassifier {
         type: "terminal",
         words: [
           "npm",
+          "npx",
           "node",
           "docker",
           "git",
@@ -22,6 +23,7 @@ export class TaskClassifier {
           "bun",
           "run",
           "install",
+          "prisma"
         ],
       },
       {

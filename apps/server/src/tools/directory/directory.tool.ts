@@ -73,10 +73,17 @@ this.session.clearLastError();
         withFileTypes: true,
       });
 
-      const result = items.map((item) => ({
-        name: item.name,
-        type: item.isDirectory() ? "directory" : "file",
-      }));
+     const result = items
+  .map((item) => {
+    const icon = item.isDirectory() ? "📁" : "📄";
+    return `${icon} ${item.name}`;
+  })
+  .join("\n");
+
+return {
+  success: true,
+  data: result,
+};
 
       return {
         success: true,

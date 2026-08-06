@@ -13,10 +13,17 @@ import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
 import type { WorkspaceInfo } from "../workspace/workspace.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
 import type { RetrievedContext } from "../context/retriever/context.types.js";
+import { DecisionEngine } from "./decision/decision.engine.js";
+import { RulePlanner } from "./rule-planner/rule.planner.js";
+import { MultiFilePlanner } from "./multi-file/multi-file.planner.js";
 
 export class PlannerService {
   private llm = LLMFactory.create();
   private parser = new JsonParser();
+  private decisionEngine = new DecisionEngine();
+  private rulePlanner = new RulePlanner();
+  private multiFilePlanner = new MultiFilePlanner();
+
   private analyzeGoal(message: string): GoalAnalysis {
     return {
       goal: message,
@@ -177,12 +184,27 @@ ${Object.entries(workspace.scripts)
     observation?: Observation,
     reflection?: Reflection,
   ): Promise<Plan> {
+    const rulePlan = this.rulePlanner.createPlan(message);
+
+    if (rulePlan) {
+      rulePlan.source = "rule";
+      return rulePlan;
+    }
+    const decision = this.decisionEngine.analyze(message);
+    if (!decision.useLLM) {
+      const rulePlan = this.rulePlanner.createPlan(message);
+      if (rulePlan) {
+        return rulePlan;
+      }
+    }
     const projectContext = this.buildProjectContext(workspace);
     const goal = this.analyzeGoal(message);
     const dependencyAnalysis = this.analyzeDependencies(message);
     const risk = this.analyzeRisk(message);
     const priority = this.analyzePriority(message);
     const executionStrategy = this.analyzeExecutionStrategy(message);
+    const relatedFiles = this.multiFilePlanner.createPlan(message, workspace);
+
     const prompt = buildPlannerPrompt(
       history,
       message,
@@ -196,12 +218,15 @@ ${Object.entries(workspace.scripts)
       executionStrategy,
       reflection,
       retrievedContext,
+      relatedFiles,
     );
-
     const response = await this.llm.generate({
       prompt,
     });
 
-    return this.parser.parse(response.text);
+    const plan = this.parser.parse(response.text);
+
+    plan.source = "ai";
+    return plan;
   }
 }

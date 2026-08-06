@@ -1,7 +1,9 @@
 import type { RetrievedContext } from "../context/retriever/context.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
+import type { FileTask } from "../planner/multi-file/multi-file.types.js";
 import type { DependencyAnalysis, ExecutionStrategy, GoalAnalysis, PriorityAnalysis, RiskAnalysis } from "../planner/planner.js";
 import { toolDefinitions } from "../tools/definitions/index.js";
+
 
 function formatObservation(
   observation?: Observation,
@@ -46,17 +48,17 @@ ${observation.facts.join("\n")}
 export function buildPlannerPrompt(
   history: string,
   message: string,
-  observation?: Observation,
-    projectContext?: string,
-    sessionContext?: string,
-    goal?: GoalAnalysis,
-    dependencies?: DependencyAnalysis,
-    risk?: RiskAnalysis,
-    priority?: PriorityAnalysis,
-    strategy?: ExecutionStrategy,
-    reflection?:Reflection,
-    retrievedContext?: RetrievedContext,
- 
+  observation: Observation | undefined,
+  projectContext: string,
+  sessionContext: string,
+  goal: GoalAnalysis,
+  dependencyAnalysis: DependencyAnalysis,
+  risk: RiskAnalysis,
+  priority: PriorityAnalysis,
+  executionStrategy: ExecutionStrategy,
+  reflection?: Reflection,
+  retrievedContext?: RetrievedContext,
+  relatedFiles?: FileTask[],
 ): string {
  
   const tools = toolDefinitions
@@ -73,6 +75,24 @@ ${tool.usage.join("\n")}
 `
     )
     .join("\n-----------------\n");
+
+  // Step 2 - Add Related Files Section
+  const relatedFilesSection = `
+Relevant Files
+
+${
+  relatedFiles && relatedFiles.length === 0
+    ? "No related files detected."
+    : relatedFiles && relatedFiles.length > 0
+    ? relatedFiles
+        .map(
+          file =>
+            `- ${file.path} (${file.reason})`,
+        )
+        .join("\n")
+    : "No related files detected."
+}
+`;
 
   return `
 You are an AI Planner.
@@ -97,54 +117,54 @@ You ONLY decide:
 Dependency Analysis:
 
 Required Files:
-${dependencies?.requiredFiles.length
-    ? dependencies.requiredFiles.map(file => `- ${file}`).join("\n")
+${dependencyAnalysis?.requiredFiles.length
+    ? dependencyAnalysis.requiredFiles.map(file => `- ${file}`).join("\n")
     : "None"}
 
 Required Tools:
-${dependencies?.requiredTools.length
-    ? dependencies.requiredTools.map(tool => `- ${tool}`).join("\n")
+${dependencyAnalysis?.requiredTools.length
+    ? dependencyAnalysis.requiredTools.map(tool => `- ${tool}`).join("\n")
     : "None"}
 
 Prerequisites:
-${dependencies?.prerequisites.length
-    ? dependencies.prerequisites.map(item => `- ${item}`).join("\n")
+${dependencyAnalysis?.prerequisites.length
+    ? dependencyAnalysis.prerequisites.map(item => `- ${item}`).join("\n")
     : "None"}
 
 Potential Risks:
-${dependencies?.risks.length
-    ? dependencies.risks.map(risk => `- ${risk}`).join("\n")
+${dependencyAnalysis?.risks.length
+    ? dependencyAnalysis.risks.map(risk => `- ${risk}`).join("\n")
     : "None"}
 
     Execution Strategy
 
 Mode:
-${strategy?.mode}
+${executionStrategy?.mode}
 
 Reason:
-${strategy?.reason}
+${executionStrategy?.reason}
 
 Verify After Each Step:
-${strategy?.verifyAfterEachStep}
+${executionStrategy?.verifyAfterEachStep}
 
 Allow Retry:
-${strategy?.allowRetry}
+${executionStrategy?.allowRetry}
 Reflection
 
 Root Cause:
-Package.json was missing.
+${reflection?.rootCause ?? "Unknown"}
 
 Lesson:
-Search for package.json before running npm commands.
+${reflection?.lesson ?? "None"}
 
 Next Action:
-Locate the project root.
+${reflection?.nextAction ?? "None"}
 
 Confidence:
-0.90
+${reflection?.confidence ?? 0}
 
 Should Retry:
-true
+${reflection?.shouldRetry ?? false}
 
 Reasoning Rules
 
@@ -274,6 +294,8 @@ ${projectContext || "Unknown"}
 
 Execution Memory:
 ${sessionContext || "No execution memory available."}
+
+${relatedFilesSection}
 
 Use the project context to choose frameworks, dependencies and file locations.
 ${

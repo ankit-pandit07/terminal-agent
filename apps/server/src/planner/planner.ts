@@ -46,6 +46,7 @@ export interface PlanStep {
 }
 
 export interface Plan {
+  source:"rule" | "ai";
   steps: PlanStep[];
 }
 

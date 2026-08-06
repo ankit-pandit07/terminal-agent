@@ -19,7 +19,6 @@ import { GoalService } from "../goal/goal.service.js";
 import { ContextRetriever } from "../context/retriever/context.retriever.js";
 import { PlannerRouter } from "../planner/router/router.js";
 
-
 // Services - Initialized once and shared
 
 const conversationRepository = new ConversationRepository();
@@ -33,7 +32,7 @@ const router = new PlannerRouter();
 
 const verifier = new VerificationService();
 const observationService = new ObservationService();
-const goalService=new GoalService();
+const goalService = new GoalService();
 const MAX_ITERATIONS = 5;
 
 export async function processAgentRequest(
@@ -55,17 +54,11 @@ export async function processAgentRequest(
         throw new Error("Conversation not found");
       }
     } else {
-      conversation = await conversationRepository.create(
-        request.message,
-      );
+      conversation = await conversationRepository.create(request.message);
     }
 
     // Save User Message
- await messageRepository.create(
-  conversation.id,
-  Role.USER,
-  request.message,
-);
+    await messageRepository.create(conversation.id, Role.USER, request.message);
     // Create Execution
     execution = await executionRepository.create(
       conversation.id,
@@ -73,15 +66,15 @@ export async function processAgentRequest(
     );
 
     // Build Context
-   
+
     const workspace = await workspaceService.analyze();
 
     let executionHistory = "";
     let lastObservation: Observation | undefined;
     let lastReflection: Reflection | undefined;
-    
+
     for (let i = 0; i < MAX_ITERATIONS; i++) {
-       const context = await contextService.buildContext(conversation.id);
+      const context = await contextService.buildContext(conversation.id);
       const sessionContext = buildSessionContext();
       const plannerHistory = `
 Conversation Context:
@@ -96,72 +89,79 @@ ${executionHistory}
         type: "planning",
         message: `Planning iteration ${i + 1}...`,
       });
-const retrievedContext = await contextRetriever.retrieve(
-    request.message,
-);
-const route = router.route(request.message);
+      const retrievedContext = await contextRetriever.retrieve(request.message);
+      const route = router.route(request.message);
 
-emit(emitter, {
-  type: "decision",
-  decision: route.decision,
-});
+      emit(emitter, {
+        type: "decision",
+        decision: route.decision,
+      });
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,
         workspace,
-         retrievedContext,
+        retrievedContext,
         sessionContext,
         lastObservation,
         lastReflection,
       );
-      
+
       emit(emitter, {
         type: "plan-created",
         steps: plan.steps.length,
       });
-      
+
       const result = await executor.execute(execution.id, plan, emitter);
       lastObservation = result.observation;
 
-      const goal= await goalService.evaluate(
-        request.message,
-        result.output,
-        result.observation
-      )
-      emit(emitter,{
-        type:"goal",
-        goal
-      })
+      let goal;
 
-      if(goal.completed){
-        emit(emitter,{
-          type:"completed",
-          response:result.output
-        });
-        return finishExecution(
-          execution.id,
-          conversation.id,
-          result
-        )
+      if (plan.source === "rule") {
+        goal = {
+          completed: true,
+          confidence: 1,
+          reason: "Rule executed successfully.",
+        };
+      } else {
+        goal = await goalService.evaluate(
+          request.message,
+          result.output,
+          result.observation,
+        );
       }
-      lastReflection = observationService.createReflection(
-        result.observation,
-      );
-      
+      emit(emitter, {
+        type: "goal",
+        goal,
+      });
+
+      if (goal.completed) {
+        emit(emitter, {
+          type: "completed",
+          response: result.output,
+        });
+        return finishExecution(execution.id, conversation.id, result);
+      }
+      lastReflection = observationService.createReflection(result.observation);
+
       emit(emitter, {
         type: "reflection",
         reflection: lastReflection,
       });
-      
+
       const verification = verifier.verify(plan, result.observation);
-      const retry = shouldRetry(verification, result.observation, i, MAX_ITERATIONS);
+      const retry = shouldRetry(
+        verification,
+        result.observation,
+        i,
+        MAX_ITERATIONS,
+      );
 
       emit(emitter, {
         type: "verification",
         verification,
         retry,
       });
-      
+
       if (retry) {
         executionHistory = appendObservation(
           executionHistory,
@@ -169,7 +169,7 @@ emit(emitter, {
         );
         continue;
       }
-      
+
       if (verification.status === "completed") {
         emit(emitter, {
           type: "completed",
