@@ -1,12 +1,13 @@
 export type Decision =
   | "planner"
-  | "file"
   | "terminal"
-  | "search"
-  | "directory";
+  | "file"
+  | "directory"
+  | "search";
 
 export interface DecisionResult {
   decision: Decision;
-  reason: string;
   useLLM: boolean;
+  confidence: number;
+  reason: string;
 }

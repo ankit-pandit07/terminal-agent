@@ -7,11 +7,13 @@ export class DecisionRules {
     intent: IntentAnalysis,
     task: TaskAnalysis,
   ): DecisionResult {
+
     if (task.type === "terminal") {
       return {
         decision: "terminal",
-        reason: "Terminal task detected",
         useLLM: false,
+        confidence: 0.99,
+        reason: "Terminal task detected.",
       };
     }
 
@@ -21,23 +23,29 @@ export class DecisionRules {
     ) {
       return {
         decision: "file",
-        reason: "Simple file creation",
         useLLM: false,
+        confidence: 0.95,
+        reason: "Simple file creation.",
       };
     }
 
-    if (task.type === "search") {
+    if (
+      intent.intent === "search" ||
+      task.type === "search"
+    ) {
       return {
         decision: "search",
-        reason: "Search request",
         useLLM: false,
+        confidence: 0.98,
+        reason: "Search request.",
       };
     }
 
     return {
       decision: "planner",
-      reason: "Complex task",
       useLLM: true,
+      confidence: 0.90,
+      reason: "Complex task requires planning.",
     };
   }
 }

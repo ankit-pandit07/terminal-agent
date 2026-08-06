@@ -17,6 +17,7 @@ import { failExecution, finishExecution } from "./execution.js";
 import { buildSessionContext } from "./session.js";
 import { GoalService } from "../goal/goal.service.js";
 import { ContextRetriever } from "../context/retriever/context.retriever.js";
+import { PlannerRouter } from "../planner/router/router.js";
 
 
 // Services - Initialized once and shared
@@ -28,6 +29,7 @@ const contextService = new ContextService();
 const workspaceService = new WorkspaceService();
 const contextRetriever = new ContextRetriever();
 const planner = new PlannerService();
+const router = new PlannerRouter();
 
 const verifier = new VerificationService();
 const observationService = new ObservationService();
@@ -97,6 +99,12 @@ ${executionHistory}
 const retrievedContext = await contextRetriever.retrieve(
     request.message,
 );
+const route = router.route(request.message);
+
+emit(emitter, {
+  type: "decision",
+  decision: route.decision,
+});
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,

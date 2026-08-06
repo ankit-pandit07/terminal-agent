@@ -3,14 +3,18 @@ import { TaskClassifier } from "../analyzers/task.classifier.js";
 import { DecisionRules } from "./decision.rules.js";
 
 export class DecisionEngine {
-  private intent = new IntentAnalyzer();
-  private task = new TaskClassifier();
+  private intentAnalyzer = new IntentAnalyzer();
+
+  private taskClassifier = new TaskClassifier();
+
   private rules = new DecisionRules();
 
   analyze(message: string) {
-    const intent = this.intent.analyze(message);
+    const intent =
+      this.intentAnalyzer.analyze(message);
 
-    const task = this.task.classify(message);
+    const task =
+      this.taskClassifier.classify(message);
 
     return this.rules.decide(
       intent,
