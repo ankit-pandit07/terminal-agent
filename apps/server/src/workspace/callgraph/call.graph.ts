@@ -5,8 +5,7 @@ export class CallGraphBuilder {
     const graph = new Map<string, string[]>();
 
     for (const edge of edges) {
-      const existing =
-        graph.get(edge.caller) ?? [];
+      const existing = graph.get(edge.caller) ?? [];
 
       existing.push(edge.callee);
 
