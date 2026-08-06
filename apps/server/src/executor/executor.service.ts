@@ -14,6 +14,7 @@ import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { ObservationService } from "../observation/observation.service.js";
 import type { ToolMetadata } from "../tools/base/tool.interface.js";
 import { ToolService } from "../tools/tool.service.js";
+import { PatchService } from "../editor/patch/patch.service.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -24,11 +25,12 @@ export class ExecutorService implements Executor {
 
   private directoryTool = new DirectoryTool(this.session);
   private editor = new EditorService();
+  private patchService = new PatchService();
   private terminalTool = new TerminalTool(this.session);
   private observationService = new ObservationService();
 
   private toolExecutionRepository = new ToolExecutionRepository();
-  private toolService=new ToolService(this.registry);
+  private toolService = new ToolService(this.registry);
 
   constructor() {
     this.registry.register(new EchoTool());
@@ -110,7 +112,15 @@ export class ExecutorService implements Executor {
               );
             }
 
-            await this.fileTool.writeFile(path, updatedContent);
+            const patchResult = this.patchService.apply(
+              content,
+              updatedContent,
+            );
+            if (!patchResult.success) {
+              return this.failure("file", "Patch validation failed.");
+            }
+            await this.fileTool.writeFile(path, patchResult.content);
+            this.session.addRecovery("Patch applied successfully.");
             this.onToolSuccess("file");
             emitter?.emit("event", {
               type: "tool-complete",
@@ -126,9 +136,7 @@ export class ExecutorService implements Executor {
             );
             outputs.push(`Updated file: ${path}`);
             this.session.addModifiedFile(path);
-            this.session.addRecovery(
-              `Successfully modified ${path}`
-            )
+            this.session.addRecovery(`Successfully modified ${path}`);
             continue;
           } catch (error) {
             const message =
@@ -158,7 +166,7 @@ export class ExecutorService implements Executor {
         if (step.tool === "terminal") {
           const command = String(step.input.command);
           this.session.addExecutedCommand(command);
-         
+
           if (!this.guard.isSafe(command)) {
             return this.failure(
               "terminal",
@@ -171,18 +179,14 @@ export class ExecutorService implements Executor {
         if (result.success) {
           this.onToolSuccess(step.tool);
           //memory engine
-          if(step.tool === "terminal" && step.input.command){
-            this.session.addSuccessfulCommand(
-              String(step.input.command),
-            )
+          if (step.tool === "terminal" && step.input.command) {
+            this.session.addSuccessfulCommand(String(step.input.command));
           }
         } else {
           this.onToolFailure(step.tool, String(result.data));
           //Memory engine
-          if(step.tool === "terminal" && step.input.command){
-            this.session.addFailedCommand(
-              String(step.input.command)
-            )
+          if (step.tool === "terminal" && step.input.command) {
+            this.session.addFailedCommand(String(step.input.command));
           }
         }
         emitter?.emit("event", {
@@ -199,24 +203,22 @@ export class ExecutorService implements Executor {
         );
 
         if (!result.success) {
-          const observation=this.observationService.create(
+          const observation = this.observationService.create(
             step.tool,
             false,
             String(result.data),
-            result.metadata
+            result.metadata,
           );
 
-          if(observation.recoverable && observation.suggestion){
-            this.session.addRecovery(
-              observation.suggestion,
-            );
+          if (observation.recoverable && observation.suggestion) {
+            this.session.addRecovery(observation.suggestion);
           }
 
           return {
-            success:false,
-            output:String(result.data),
-            observation
-          }
+            success: false,
+            output: String(result.data),
+            observation,
+          };
         }
 
         outputs.push(String(result.data));
@@ -247,5 +249,5 @@ export class ExecutorService implements Executor {
   }
   getToolService(): ToolService {
     return this.toolService;
-}
+  }
 }
