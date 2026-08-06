@@ -16,8 +16,7 @@ export class AgentService {
         const response=await this.api.post("/chat",{
             message,
         })
- console.log("SERVER RESPONSE:");
-  console.log(response.data);
+
         return response.data;
     }
     

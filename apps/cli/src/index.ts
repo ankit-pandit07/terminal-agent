@@ -1,3 +1,6 @@
-import { startCLI } from "./cli.js"
+import { startCLI } from "./cli.js";
 
-startCLI();
+startCLI().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

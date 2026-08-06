@@ -1,0 +1,74 @@
+import chalk from "chalk";
+import ora from "ora";
+
+import { InteractiveShell } from "../interactive/shell.js";
+import { StreamRenderer } from "../renderer/stream.renderer.js";
+import { StreamService } from "../services/stream.service.js";
+import { printBanner } from "../utils/banner.js";
+
+import { ConversationManager } from "../conversation/conversation.manager.js";
+import { CommandRouter } from "../commands/command.router.js";
+
+export async function runInteractive() {
+  const stream = new StreamService();
+
+  const renderer = new StreamRenderer();
+
+  const manager = new ConversationManager();
+
+  const router = new CommandRouter(manager);
+
+  printBanner();
+
+  const shell = new InteractiveShell();
+
+  while (true) {
+    const input = await shell.ask();
+
+    if (!input) {
+      continue;
+    }
+
+    if (input.toLowerCase() === "exit") {
+      console.log(chalk.green("\nGoodbye!\n"));
+      shell.close();
+      break;
+    }
+
+    const handled = await router.handle(input);
+
+    if (handled) {
+      console.log();
+      continue;
+    }
+
+    const spinner = ora("Connecting to NodeBase AI...").start();
+
+    try {
+      await stream.stream(
+        {
+          message: input,
+          conversationId: manager.getConversationId(),
+        },
+        (event) => {
+          spinner.stop();
+
+          if (event.type === "done") {
+            manager.setConversationId(event.conversationId);
+            return;
+          }
+
+          renderer.render(event);
+        },
+      );
+    } catch (error) {
+      spinner.fail("Request failed");
+
+      if (error instanceof Error) {
+        console.log(chalk.red(error.message));
+      }
+    }
+
+    console.log();
+  }
+}
