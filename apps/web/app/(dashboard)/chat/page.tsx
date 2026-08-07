@@ -1,3 +1,11 @@
+import { ChatInput } from "../../features/chat/components/chat-input";
+import { ChatWindow } from "../../features/chat/components/chat-window";
+
 export default function ChatPage(){
-    return <h1>Chat</h1>
+    return (
+        <div className="flex h-full flex-col">
+            <ChatWindow />
+            <ChatInput />
+        </div>
+    );
 }
