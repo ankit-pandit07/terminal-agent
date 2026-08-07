@@ -126,6 +126,7 @@ router.post("/execute", async (req, res, next) => {
     const body = executeSchema.parse(req.body);
 
     const plan: Plan = {
+      source:"rule",
       steps: body.plan.steps.map((step) => ({
         tool: step.tool,
         input: step.input as ToolInput,
