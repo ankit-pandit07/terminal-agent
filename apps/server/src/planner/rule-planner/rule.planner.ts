@@ -2,6 +2,7 @@ import type { Plan } from "../planner.js";
 
 import { RuleRegistry } from "./rule.registry.js";
 import { DirectoryRule } from "./rules/directory.rule.js";
+import { DockerRule } from "./rules/docker.rule.js";
 import { GitRule } from "./rules/git.rule.js";
 import { NpmRule } from "./rules/npm.rule.js";
 import { PrismaRule } from "./rules/prisma.rule.js";
@@ -18,6 +19,7 @@ export class RulePlanner {
     this.registry.register(new NpmRule());
     this.registry.register(new GitRule());
     this.registry.register(new PrismaRule());
+    this.registry.register(new DockerRule());
 
   }
 

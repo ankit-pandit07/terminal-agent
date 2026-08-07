@@ -114,6 +114,20 @@ ${executionHistory}
       const result = await executor.execute(execution.id, plan, emitter);
       lastObservation = result.observation;
 
+      // FIX: Handle rule-based execution early
+      if (plan.source === "ai") {
+        emit(emitter, {
+          type: "completed",
+          response: result.output,
+        });
+
+        return finishExecution(
+          execution.id,
+          conversation.id,
+          result,
+        );
+      }
+
       let goal;
 
       if (plan.source === "rule") {

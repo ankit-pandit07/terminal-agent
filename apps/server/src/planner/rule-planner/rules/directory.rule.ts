@@ -22,24 +22,23 @@ export class DirectoryRule implements PlanningRule {
   execute(context: RuleContext): RuleResult {
     const text = context.message.toLowerCase();
 
-    if (text.includes("current directory") || text === "pwd") {
-      return {
-        matched: true,
-        confidence: 1,
-        plan: {
-             source: "rule",
-          steps: [
-            {
-              tool: "directory",
-              input: {
-                action: "pwd",
-              },
-            },
-          ],
+    if (text.includes("current directory")) {
+  return {
+    matched: true,
+    confidence: 1,
+    plan: {
+      source: "rule",
+      steps: [
+        {
+          tool: "terminal",
+          input: {
+            command: "pwd",
+          },
         },
-      };
-    }
-
+      ],
+    },
+  };
+}
     if (text.includes("list files") || text.includes("show files")) {
       return {
         matched: true,

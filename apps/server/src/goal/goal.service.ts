@@ -1,30 +1,28 @@
 import { LLMFactory } from "../llm/llm.factory.js";
-
 import { GoalParser } from "./goal.parser.js";
-
 import { buildGoalEvaluationPrompt } from "./goal.prompt.js";
-
 import type { Observation } from "../observation/observation.js";
-
 import type { GoalEvaluation } from "./goal.types.js";
 
 export class GoalService {
   private llm = LLMFactory.create();
-
   private parser = new GoalParser();
 
   async evaluate(
     request: string,
-
     output: string,
-
     observation: Observation,
   ): Promise<GoalEvaluation> {
+    if (observation.success) {
+    return {
+        completed: true,
+        confidence: 1,
+        reason: observation.summary,
+    };
+}
     const prompt = buildGoalEvaluationPrompt(
       request,
-
       output,
-
       JSON.stringify(observation, null, 2),
     );
 

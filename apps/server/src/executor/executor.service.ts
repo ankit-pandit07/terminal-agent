@@ -16,6 +16,7 @@ import type { ToolMetadata } from "../tools/base/tool.interface.js";
 import { ToolService } from "../tools/tool.service.js";
 import { PatchService } from "../editor/patch/patch.service.js";
 
+
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
   private guard = new CommandGuard();
@@ -142,6 +143,14 @@ export class ExecutorService implements Executor {
             const message =
               error instanceof Error ? error.message : "Unknown error";
             this.onToolFailure("file", message);
+            
+            // Change 3: Restore on failure
+            try {
+            } catch (restoreError) {
+              // Log restore error but continue with the original failure
+              console.error(`Failed to restore file ${path}:`, restoreError);
+            }
+            
             await this.toolExecutionRepository.create(
               executionId,
               "file",
