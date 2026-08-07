@@ -15,7 +15,11 @@ import { ObservationService } from "../observation/observation.service.js";
 import type { ToolMetadata } from "../tools/base/tool.interface.js";
 import { ToolService } from "../tools/tool.service.js";
 import { PatchService } from "../editor/patch/patch.service.js";
-
+import { BuildService } from "../verification/build/build.service.js";
+import { BackupService } from "../editor/rollback/backup.service.js";
+import { RollbackService } from "../editor/rollback/rollback.service.js";
+import { WorkspaceService } from "../workspace/workspace.service.js";
+import { MemoryService } from "../memory/memory.service.js"; // Add this import
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -33,6 +37,12 @@ export class ExecutorService implements Executor {
   private toolExecutionRepository = new ToolExecutionRepository();
   private toolService = new ToolService(this.registry);
 
+  private buildService = new BuildService();
+  private backupService = new BackupService();
+  private rollbackService = new RollbackService();
+  private workspaceService = new WorkspaceService();
+  private memoryService = new MemoryService();
+
   constructor() {
     this.registry.register(new EchoTool());
     this.registry.register(this.fileTool);
@@ -40,6 +50,7 @@ export class ExecutorService implements Executor {
     this.registry.register(this.terminalTool);
     this.registry.register(new SearchTool(this.session));
   }
+  
   private onToolSuccess(tool: string): void {
     this.session.setLastTool(tool);
     this.session.clearLastError();
@@ -94,19 +105,27 @@ export class ExecutorService implements Executor {
         if (step.tool === "file" && step.input.action === "edit") {
           const path = String(step.input.path);
           const instruction = String(step.input.instruction);
+          let backup: any = null;
 
           try {
-            //Read
+            // Read
             const content = await this.fileTool.readFile(path);
 
             // Ask AI to edit it
             const updatedContent = await this.editor.edit(content, instruction);
 
-            //Save updated file
+            // Save updated file
             if (
               updatedContent.trim().startsWith("{") ||
               updatedContent.includes("__rules__")
             ) {
+              // Save failure to memory
+              await this.memoryService.saveToolExecution(
+                executionId,
+                "file",
+                `FAILED: Editor returned JSON instead of source code`,
+              );
+              
               return this.failure(
                 "file",
                 "Editor returned JSON instead of source code.",
@@ -118,16 +137,75 @@ export class ExecutorService implements Executor {
               updatedContent,
             );
             if (!patchResult.success) {
+              // Save failure to memory
+              await this.memoryService.saveToolExecution(
+                executionId,
+                "file",
+                `FAILED: Patch validation failed`,
+              );
+              
               return this.failure("file", "Patch validation failed.");
             }
+
+            // Save patch to memory
+            await this.memoryService.savePatch(
+              executionId,
+              path,
+              updatedContent,
+            );
+
+            // Create backup
+            backup = await this.backupService.create(path);
+            
+            // Write file
             await this.fileTool.writeFile(path, patchResult.content);
+            
+            // Verify build
+            const workspace = await this.workspaceService.analyze();
+            const build = await this.buildService.verify(workspace);
+
+            if (!build.success) {
+              // Build failed - rollback
+              await this.rollbackService.restore(backup);
+              await this.backupService.delete(backup);
+              
+              // Save rollback to memory
+              await this.memoryService.saveRollback(
+                executionId,
+                path,
+              );
+              
+              // Save failure to memory
+              await this.memoryService.saveToolExecution(
+                executionId,
+                "file",
+                `FAILED: Build failed after file edit`,
+              );
+              
+              this.session.addRecovery("Rollback executed after build failure.");
+              return this.failure("build", `Build failed.\n${build.stderr}`);
+            }
+            
+            // Build succeeded - cleanup
+            await this.backupService.delete(backup);
+            
+            // Save successful execution to memory
+            await this.memoryService.saveToolExecution(
+              executionId,
+              "file",
+              `Updated file: ${path} (build verified)`,
+            );
+            
             this.session.addRecovery("Patch applied successfully.");
+            this.session.addRecovery("Build verification passed.");
             this.onToolSuccess("file");
+            
             emitter?.emit("event", {
               type: "tool-complete",
               tool: "file",
               success: true,
             });
+            
             await this.toolExecutionRepository.create(
               executionId,
               "file",
@@ -135,22 +213,39 @@ export class ExecutorService implements Executor {
               `Updated file: ${path}`,
               true,
             );
+            
             outputs.push(`Updated file: ${path}`);
             this.session.addModifiedFile(path);
             this.session.addRecovery(`Successfully modified ${path}`);
             continue;
+            
           } catch (error) {
-            const message =
-              error instanceof Error ? error.message : "Unknown error";
+            const message = error instanceof Error ? error.message : "Unknown error";
             this.onToolFailure("file", message);
-            
-            // Change 3: Restore on failure
-            try {
-            } catch (restoreError) {
-              // Log restore error but continue with the original failure
-              console.error(`Failed to restore file ${path}:`, restoreError);
+
+            // Save failure to memory
+            await this.memoryService.saveToolExecution(
+              executionId,
+              "file",
+              `FAILED: ${message}`,
+            );
+
+            // Restore on failure
+            if (backup) {
+              try {
+                await this.rollbackService.restore(backup);
+                await this.backupService.delete(backup);
+                
+                // Save rollback to memory
+                await this.memoryService.saveRollback(
+                  executionId,
+                  path,
+                );
+              } catch (restoreError) {
+                console.error(`Failed to restore file ${path}:`, restoreError);
+              }
             }
-            
+
             await this.toolExecutionRepository.create(
               executionId,
               "file",
@@ -164,6 +259,14 @@ export class ExecutorService implements Executor {
 
         if (!tool) {
           const message = `Tool "${step.tool}" not found`;
+          
+          // Save failure to memory
+          await this.memoryService.saveToolExecution(
+            executionId,
+            step.tool,
+            `FAILED: ${message}`,
+          );
+          
           emitter?.emit("event", {
             type: "tool-complete",
             tool: step.tool,
@@ -177,6 +280,13 @@ export class ExecutorService implements Executor {
           this.session.addExecutedCommand(command);
 
           if (!this.guard.isSafe(command)) {
+            // Save blocked command to memory
+            await this.memoryService.saveToolExecution(
+              executionId,
+              "terminal",
+              `FAILED: Blocked unsafe command: ${command}`,
+            );
+            
             return this.failure(
               "terminal",
               "Blocked: Unsafe command detected.",
@@ -185,24 +295,43 @@ export class ExecutorService implements Executor {
         }
 
         const result = await tool.execute(step.input);
+        
         if (result.success) {
           this.onToolSuccess(step.tool);
-          //memory engine
+          
+          // Save successful execution to memory
+          await this.memoryService.saveToolExecution(
+            executionId,
+            step.tool,
+            String(result.data),
+          );
+          
+          // Memory engine - successful command
           if (step.tool === "terminal" && step.input.command) {
             this.session.addSuccessfulCommand(String(step.input.command));
           }
         } else {
           this.onToolFailure(step.tool, String(result.data));
-          //Memory engine
+          
+          // Save failure to memory
+          await this.memoryService.saveToolExecution(
+            executionId,
+            step.tool,
+            `FAILED: ${String(result.data)}`,
+          );
+          
+          // Memory engine - failed command
           if (step.tool === "terminal" && step.input.command) {
             this.session.addFailedCommand(String(step.input.command));
           }
         }
+        
         emitter?.emit("event", {
           type: "tool-complete",
           tool: step.tool,
           success: result.success,
         });
+        
         await this.toolExecutionRepository.create(
           executionId,
           step.tool,
@@ -232,11 +361,19 @@ export class ExecutorService implements Executor {
 
         outputs.push(String(result.data));
       }
+      
       const output = outputs.join("\n");
+      
+      // Save final execution summary to memory
+      await this.memoryService.saveToolExecution(
+        executionId,
+        "executor",
+        `Completed ${plan.steps.length} steps successfully`,
+      );
+      
       return {
         success: true,
         output,
-
         observation: this.observationService.create("executor", true, output, {
           cwd: this.session.getCurrentDirectory(),
           filesModified: this.session.getModifiedFiles(),
@@ -249,13 +386,24 @@ export class ExecutorService implements Executor {
         tool: "executor",
         success: false,
       });
+      
       const message = error instanceof Error ? error.message : "Unknown error";
+      
+      // Save error to memory
+      await this.memoryService.saveToolExecution(
+        executionId,
+        "executor",
+        `FAILED: ${message}`,
+      );
+      
       return this.failure("unknown", message);
     }
   }
+  
   getSession(): SessionState {
     return this.session;
   }
+  
   getToolService(): ToolService {
     return this.toolService;
   }

@@ -27,9 +27,7 @@ export class DockerRule implements PlanningRule {
   execute(context: RuleContext): RuleResult {
     return {
       matched: true,
-
       confidence: 1,
-
       plan: {
         source:"rule",
         steps: [

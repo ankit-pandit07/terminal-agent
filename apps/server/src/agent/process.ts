@@ -18,6 +18,7 @@ import { buildSessionContext } from "./session.js";
 import { GoalService } from "../goal/goal.service.js";
 import { ContextRetriever } from "../context/retriever/context.retriever.js";
 import { PlannerRouter } from "../planner/router/router.js";
+import { MemoryService } from "../memory/memory.service.js"; // Add this import
 
 // Services - Initialized once and shared
 
@@ -33,6 +34,7 @@ const router = new PlannerRouter();
 const verifier = new VerificationService();
 const observationService = new ObservationService();
 const goalService = new GoalService();
+const memoryService = new MemoryService();
 const MAX_ITERATIONS = 5;
 
 export async function processAgentRequest(
@@ -59,6 +61,14 @@ export async function processAgentRequest(
 
     // Save User Message
     await messageRepository.create(conversation.id, Role.USER, request.message);
+    
+    // STEP 1: Save conversation to memory
+    await memoryService.saveConversation(
+      conversation.id,
+      "user-message",
+      request.message,
+    );
+
     // Create Execution
     execution = await executionRepository.create(
       conversation.id,
@@ -66,7 +76,6 @@ export async function processAgentRequest(
     );
 
     // Build Context
-
     const workspace = await workspaceService.analyze();
 
     let executionHistory = "";
@@ -89,6 +98,7 @@ ${executionHistory}
         type: "planning",
         message: `Planning iteration ${i + 1}...`,
       });
+      
       const retrievedContext = await contextRetriever.retrieve(request.message);
       const route = router.route(request.message);
 
@@ -96,6 +106,7 @@ ${executionHistory}
         type: "decision",
         decision: route.decision,
       });
+      
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,
@@ -121,6 +132,13 @@ ${executionHistory}
           response: result.output,
         });
 
+        // STEP 2: Save execution result to memory for AI plan
+        await memoryService.saveExecution(
+          execution.id,
+          "final-output",
+          result.output,
+        );
+
         return finishExecution(
           execution.id,
           conversation.id,
@@ -143,6 +161,7 @@ ${executionHistory}
           result.observation,
         );
       }
+      
       emit(emitter, {
         type: "goal",
         goal,
@@ -153,8 +172,17 @@ ${executionHistory}
           type: "completed",
           response: result.output,
         });
+
+        // STEP 3: Save execution result to memory when goal is completed
+        await memoryService.saveExecution(
+          execution.id,
+          "final-output",
+          result.output,
+        );
+
         return finishExecution(execution.id, conversation.id, result);
       }
+      
       lastReflection = observationService.createReflection(result.observation);
 
       emit(emitter, {
@@ -190,10 +218,24 @@ ${executionHistory}
           response: result.output,
         });
 
+        // STEP 4: Save execution result to memory when verification passes
+        await memoryService.saveExecution(
+          execution.id,
+          "final-output",
+          result.output,
+        );
+
         return finishExecution(execution.id, conversation.id, result);
       }
 
       if (plan.steps.length === 0) {
+        // STEP 5: Save failure to memory
+        await memoryService.saveExecution(
+          execution.id,
+          "error",
+          "Planner returned an empty plan.",
+        );
+
         return failExecution(
           execution.id,
           conversation.id,
@@ -207,21 +249,40 @@ ${executionHistory}
       );
     }
 
-    // if we've exhausted all iterations without success
+    // If we've exhausted all iterations without success
+    const errorMessage = `Maximum iterations (${MAX_ITERATIONS}) reached without completing the task.`;
+    
+    // STEP 6: Save max iterations reached to memory
+    await memoryService.saveExecution(
+      execution.id,
+      "error",
+      errorMessage,
+    );
+
     return failExecution(
       execution.id,
       conversation.id,
-      `Maximum iterations (${MAX_ITERATIONS}) reached without completing the task.`,
+      errorMessage,
     );
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
     emit(emitter, {
       type: "error",
-      message: error instanceof Error ? error.message : "Unknown error",
+      message: errorMessage,
     });
+    
     if (execution) {
       await executionRepository.updateStatus(
         execution.id,
         ExecutionStatus.FAILED,
+      );
+      
+      // STEP 7: Save error to memory
+      await memoryService.saveExecution(
+        execution.id,
+        "error",
+        errorMessage,
       );
     }
 
