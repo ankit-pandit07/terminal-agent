@@ -63,5 +63,6 @@ export const useChatStore = create<ChatStore>((set) => ({
   clear: () =>
     set({
       messages: [],
+      events:[]
     }),
 }));

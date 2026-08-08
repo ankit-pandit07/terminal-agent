@@ -4,17 +4,21 @@ import { useChatStore } from "../store/chat.store";
 import { MessageItem } from "./message-item";
 
 export function MessageList() {
-  const messages = useChatStore((state) => state.messages);
+  const messages = useChatStore((s) => s.messages);
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-zinc-500">
+        Start a conversation with your AI Agent 
+      </div>
+    );
+  }
 
   return (
-    <>
-     {messages.map((message)=>(
-        <MessageItem 
-        key={message.id}
-        role={message.role}
-        content={message.content}
-        />
-     ))}
-    </>
+    <div className="space-y-4">
+      {messages.map((message) => (
+        <MessageItem key={message.id} message={message} />
+      ))}
+    </div>
   );
 }

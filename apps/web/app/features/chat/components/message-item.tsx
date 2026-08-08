@@ -1,23 +1,42 @@
 "use client";
-import clsx from "clsx";
-type Props = {
-  role: "user" | "assistant";
-  content: string;
-};
 
-export function MessageItem({ role, content }: Props) {
-  const isUser = role === "user";
+import clsx from "clsx";
+import { Message } from "../store/chat.store";
+
+interface Props {
+  message: Message;
+}
+
+export function MessageItem({ message }: Props) {
+  const isUser = message.role === "user";
+
   return (
     <div
-      className={clsx("flex mb-4", isUser ? "justify-end" : "justify-start")}
+      className={clsx(
+        "mb-6 flex",
+        isUser ? "justify-end" : "justify-start"
+      )}
     >
       <div
         className={clsx(
-          "max-w-2xl rounded-lg px-4 py-3",
-          isUser ? "bg-blue-600 text-white" : "bg-zinc-800 text-white",
+          "w-fit max-w-[80%] rounded-2xl px-5 py-4 shadow-lg transition-all",
+          isUser
+            ? "bg-blue-600 text-white"
+            : "border border-zinc-800 bg-zinc-900 text-zinc-100"
         )}
       >
-        {content}
+        {/* Header */}
+        <div className="mb-3 flex items-center gap-2 text-xs font-semibold opacity-80">
+          <span className="text-base">
+            {isUser ? "👤" : "🤖"}
+          </span>
+          <span>{isUser ? "You" : "Assistant"}</span>
+        </div>
+
+        {/* Message */}
+        <p className="whitespace-pre-wrap break-words text-sm leading-7">
+          {message.content}
+        </p>
       </div>
     </div>
   );
