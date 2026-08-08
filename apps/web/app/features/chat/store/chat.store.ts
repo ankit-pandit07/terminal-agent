@@ -11,6 +11,7 @@ interface ChatStore {
   messages: Message[];
   addUserMessage: (text: string) => void;
   addAssistantMessage: (text: string) => void;
+  setMessages: (messages: Message[]) => void;
 
   events: StreamEvent[];
 
@@ -53,6 +54,11 @@ export const useChatStore = create<ChatStore>((set) => ({
         },
       ],
     })),
+
+    setMessages: (messages) =>
+  set({
+    messages,
+  }),
 
   clear: () =>
     set({
