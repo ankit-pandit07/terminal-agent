@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { StreamEvent } from "../api/chat.stream";
 
 export interface Message {
   id: string;
@@ -8,18 +9,49 @@ export interface Message {
 
 interface ChatStore {
   messages: Message[];
+  addUserMessage: (text: string) => void;
+  addAssistantMessage: (text: string) => void;
 
-  addMessage: (message: Message) => void;
+  events: StreamEvent[];
 
+  addEvent: (event: StreamEvent) => void;
   clear: () => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
 
-  addMessage: (message) =>
+  
+  events: [],
+
+  addEvent: (event) =>
     set((state) => ({
-      messages: [...state.messages, message],
+      events: [...state.events, event],
+    })),
+
+
+  addUserMessage: (text) =>
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        },
+      ],
+    })),
+
+  addAssistantMessage: (text) =>
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: text,
+        },
+      ],
     })),
 
   clear: () =>
