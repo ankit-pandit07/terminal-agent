@@ -2,46 +2,71 @@
 
 import { useEffect, useState } from "react";
 
-import { getConversation, getConversations } from "../api/conversation.api";
+import {
+  getConversation,
+  getConversations,
+} from "../api/conversation.api";
 
 import { useConversationStore } from "../store/conversation.store";
 import { useChatStore } from "../store/chat.store";
 
 export function useConversations() {
-  const conversations = useConversationStore((s) => s.conversations);
-  const setConversations = useConversationStore((s) => s.setConversations);
-  const selectConversation = useConversationStore((s) => s.selectConversation);
-  const setMessages = useChatStore((s) => s.setMessages);
+  const setConversations =
+    useConversationStore(
+      (s) => s.setConversations
+    );
 
-  const clearChat = useChatStore((s) => s.clear);
+  const conversations =
+    useConversationStore(
+      (s) => s.conversations
+    );
 
-  const [loading, setLoading] = useState(true);
+  const selectConversation =
+    useConversationStore(
+      (s) => s.selectConversation
+    );
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const setMessages = useChatStore(
+    (s) => s.setMessages
+  );
 
   async function refresh() {
     try {
-      setLoading(true);
-
       const data = await getConversations();
 
       setConversations(data);
     } catch (error) {
-      console.error("Failed to load conversations:", error);
+      console.error(
+        "Failed to load conversations:",
+        error
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function openConversation(id: string) {
+  async function openConversation(
+    id: string
+  ) {
     try {
-      selectConversation(id);
+      const conversation =
+        await getConversation(id);
 
-      clearChat();
+      selectConversation(
+        conversation.id
+      );
 
-      const conversation = await getConversation(id);
-
-      setMessages(conversation.messages ?? []);
+      setMessages(
+        conversation.messages
+      );
     } catch (error) {
-      console.error("Failed to open conversation:", error);
+      console.error(
+        "Failed to open conversation:",
+        error
+      );
     }
   }
 

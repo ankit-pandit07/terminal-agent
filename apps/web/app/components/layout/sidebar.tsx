@@ -1,22 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ConversationList } from "../../features/chat/components/conversation-list";
 import { useChatStore } from "../../features/chat/store/chat.store";
 import { useConversationStore } from "../../features/chat/store/conversation.store";
 
-
 export function Sidebar() {
+  const router = useRouter();
   const clearChat = useChatStore((s) => s.clear);
-
   const clearSelection = useConversationStore((s) => s.clearSelection);
 
   function handleNewChat() {
     clearChat();
     clearSelection();
+    router.push("/chat");
   }
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900 text-white">
+    <aside className="flex h-full w-64 flex-col border-r border-zinc-800 bg-zinc-950 text-white">
       {/* Logo */}
       <div className="border-b border-zinc-800 p-4">
         <h1 className="text-xl font-bold">NodeBase</h1>

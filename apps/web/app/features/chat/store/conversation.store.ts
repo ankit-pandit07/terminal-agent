@@ -10,31 +10,24 @@ export interface Conversation {
 interface ConversationStore {
   conversations: Conversation[];
   selectedConversationId?: string;
+
   setConversations: (items: Conversation[]) => void;
   selectConversation: (id: string) => void;
   removeConversation: (id: string) => void;
-  addConversation: (conversation: Conversation) => void;
   clearSelection: () => void;
 }
 
+
+
 export const useConversationStore = create<ConversationStore>((set) => ({
   conversations: [],
+
   selectedConversationId: undefined,
 
   setConversations: (items) =>
     set({
       conversations: items,
     }),
-
-    addConversation: (conversation) =>
-  set((state) => ({
-    conversations: [
-      conversation,
-      ...state.conversations.filter(
-        (item) => item.id !== conversation.id
-      ),
-    ],
-  })),
 
   selectConversation: (id) =>
     set({
@@ -46,11 +39,6 @@ export const useConversationStore = create<ConversationStore>((set) => ({
       conversations: state.conversations.filter(
         (conversation) => conversation.id !== id,
       ),
-      ...(state.selectedConversationId === id
-        ? {
-            selectedConversationId: undefined,
-          }
-        : {}),
     })),
 
   clearSelection: () =>
