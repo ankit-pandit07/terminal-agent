@@ -1,62 +1,48 @@
-"use client"
-import {useState} from "react"
+"use client";
+
 import { useChatStore } from "../store/chat.store";
-import { sendMessage } from "../api/chat.api";
 import { streamChat } from "../api/chat.stream";
 
-export function useChat(){
-    const [loading, setLoading]=useState(false);
+export function useChat() {
+  const loading = useChatStore((s) => s.loading);
+  const setLoading = useChatStore((s) => s.setLoading);
+  const conversationId = useChatStore((s) => s.conversationId);
+  const addUserMessage = useChatStore((s) => s.addUserMessage);
+  const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
+  const addEvent = useChatStore((s) => s.addEvent);
 
-    const addUserMessage=useChatStore((s)=>s.addUserMessage);
+  async function stream(message: string) {
+    if (loading) return;
+    setLoading(true);
+    addUserMessage(message);
 
-    const addAssistantMessage=useChatStore((s)=>s.addAssistantMessage);
+    try {
+      await streamChat(
+        {
+          message,
+          ...(conversationId ? { conversationId } : {}),
+        },
 
-    async function send(message:string){
-        setLoading(true);
-        
-        try {
-            addUserMessage(message);
-            
-            const response=await sendMessage({
-                message,
-            })
-            addAssistantMessage(
-                response.response ?? JSON.stringify(response),
-            );
-        } finally {
-            setLoading(false);
-            
-        }
+        (event) => {
+          addEvent(event);
+          if (event.type === "completed") {
+            addAssistantMessage(String(event.response ?? ""));
+          }
+        },
+      );
+    } catch (error) {
+      console.error("Chat stream failed:", error);
 
-        
+      addAssistantMessage(
+        "Sorry, something went wrong while processing your request.",
+      );
+    } finally {
+      setLoading(false);
     }
+  }
 
-    const addEvent=useChatStore((s)=>s.addEvent);
-
-    async function stream(
-        message:string,
-    ){
-        setLoading(true);
-        addUserMessage(message);
-
-        try{
-            await streamChat(
-                { message },
-                (event)=>{
-                addEvent(event);
-
-                if(event.type === "completed"){
-                    addAssistantMessage(String(event.response));
-                }
-            })
-        }finally{
-            setLoading(false);
-        }
-    }
-
-    return {
-        loading,
-        send,
-        stream
-    }
+  return {
+    loading,
+    stream,
+  };
 }

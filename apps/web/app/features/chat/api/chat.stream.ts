@@ -1,59 +1,83 @@
-export interface StreamRequest{
-    message:string;
-    conversationId?:string;
+export interface StreamEvent {
+  type: string;
+  [key: string]: unknown;
 }
 
-export interface StreamEvent{
-    type:string;
-    [key:string]:unknown;
+interface StreamInput {
+  message: string;
+  conversationId?: string;
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 export async function streamChat(
-    body:StreamRequest,
-    onEvent:(event:StreamEvent)=>void,
-){
-    const response=await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/stream`,
-    {
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json",
-            Accept:"text/event-stream",
-        },
+  input: StreamInput,
+  onEvent: (event: StreamEvent) => void,
+) {
+  const url = `${API_URL}/chat/stream`;
 
-        body:JSON.stringify(body),
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Stream request failed: ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error("Response body is empty.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
     }
-);
 
-if(!response.body){
-    throw new Error("Stream not available");
-}
-
-const reader = response.body.getReader();
-const decoder=new TextDecoder();
-
-let buffer="";
-
-while(true){
-    const {done,value}=await reader.read();
-
-    if(done) break;
-    buffer +=decoder.decode(value,{
-        stream:true,
+    buffer += decoder.decode(value, {
+      stream: true,
     });
 
-    const events=buffer.split("\n\n");
+    const blocks = buffer.split("\n\n");
 
-    buffer=events.pop() ?? "";
+    buffer = blocks.pop() ?? "";
 
-    for (const event of events){
-        const dataLine=event.split("\n").find((line)=>line.startsWith("data"));
+    for (const block of blocks) {
+      let eventType = "";
+      let data = "";
 
-        if(!dataLine) continue;
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) {
+          eventType = line.slice(6).trim();
+        }
 
-        const json=JSON.parse(
-            dataLine.replace("data:", "").trim(),
-        );
-        onEvent(json);
+        if (line.startsWith("data:")) {
+          data += line.slice(5).trim();
+        }
+      }
+
+      if (!data) continue;
+
+      try {
+        const parsed = JSON.parse(data);
+
+        onEvent({
+          type: eventType || parsed.type || "message",
+          ...parsed,
+        });
+      } catch (error) {
+        console.error("Invalid SSE data:", data, error);
+      }
     }
-}
+  }
 }

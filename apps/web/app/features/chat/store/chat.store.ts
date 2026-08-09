@@ -9,27 +9,26 @@ export interface Message {
 
 interface ChatStore {
   messages: Message[];
+
   addUserMessage: (text: string) => void;
   addAssistantMessage: (text: string) => void;
   setMessages: (messages: Message[]) => void;
 
   events: StreamEvent[];
-
   addEvent: (event: StreamEvent) => void;
+  setEvents: (events: StreamEvent[]) => void;
+
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+
+  conversationId?: string;
+  setConversationId: (id?: string) => void;
+
   clear: () => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
-
-  
-  events: [],
-
-  addEvent: (event) =>
-    set((state) => ({
-      events: [...state.events, event],
-    })),
-
 
   addUserMessage: (text) =>
     set((state) => ({
@@ -55,14 +54,42 @@ export const useChatStore = create<ChatStore>((set) => ({
       ],
     })),
 
-    setMessages: (messages) =>
-  set({
-    messages,
-  }),
+  setMessages: (messages) =>
+    set({
+      messages,
+    }),
+
+  events: [],
+
+  addEvent: (event) =>
+    set((state) => ({
+      events: [...state.events, event],
+    })),
+
+  setEvents: (events) =>
+    set({
+      events,
+    }),
+
+  loading: false,
+
+  setLoading: (loading) =>
+    set({
+      loading,
+    }),
+
+  conversationId: undefined,
+
+  setConversationId: (id) =>
+    set({
+      conversationId: id,
+    }),
 
   clear: () =>
     set({
       messages: [],
-      events:[]
+      events: [],
+      loading: false,
+      conversationId: undefined,
     }),
 }));
