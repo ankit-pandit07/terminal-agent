@@ -103,7 +103,7 @@ export class ExecutorService implements Executor {
         const tool = this.registry.get(step.tool);
 
         if (step.tool === "file" && step.input.action === "edit") {
-          const path = String(step.input.path);
+          const path = this.fileTool.resolvePath(String(step.input.path))
           const instruction = String(step.input.instruction);
           let backup: any = null;
 

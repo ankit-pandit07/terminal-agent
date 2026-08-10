@@ -10,41 +10,46 @@ export class DirectoryRule implements PlanningRule {
     return (
       text.includes("list files") ||
       text.includes("show files") ||
-      text.includes("current directory") ||
-      text.includes("pwd") ||
       text.includes("list folders") ||
       text.includes("show folders") ||
-      text.startsWith("cd ") ||
-      text.startsWith("open folder")
+      text.includes("current directory") ||
+      text.includes("pwd") ||
+      text.startsWith("cd ")
     );
   }
 
   execute(context: RuleContext): RuleResult {
     const text = context.message.toLowerCase();
 
-    if (text.includes("current directory")) {
-  return {
-    matched: true,
-    confidence: 1,
-    plan: {
-      source: "rule",
-      steps: [
-        {
-          tool: "terminal",
-          input: {
-            command: "pwd",
-          },
-        },
-      ],
-    },
-  };
-}
-    if (text.includes("list files") || text.includes("show files")) {
+    if (text.includes("current directory") || text.trim() === "pwd") {
       return {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
+          steps: [
+            {
+              tool: "terminal",
+              input: {
+                command: "pwd",
+              },
+            },
+          ],
+        },
+      };
+    }
+
+    if (
+      text.includes("list files") ||
+      text.includes("show files") ||
+      text.includes("list folders") ||
+      text.includes("show folders")
+    ) {
+      return {
+        matched: true,
+        confidence: 1,
+        plan: {
+          source: "rule",
           steps: [
             {
               tool: "directory",
@@ -62,13 +67,12 @@ export class DirectoryRule implements PlanningRule {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
           steps: [
             {
-              tool: "directory",
+              tool: "terminal",
               input: {
-                action: "cd",
-                path: context.message.substring(3).trim(),
+                command: context.message.trim(),
               },
             },
           ],

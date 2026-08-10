@@ -10,6 +10,13 @@ export class PlanValidator {
     "create",
     "delete",
   ] as const;
+
+  private readonly allowedDirectoryActions = [
+    "create",
+    "list",
+    "tree",
+  ] as const;
+
   private readonly availableTools = new Set(
     toolDefinitions.map((tool) => tool.name),
   );
@@ -31,11 +38,13 @@ export class PlanValidator {
       if (!step.tool) {
         throw new Error(`Step ${index + 1}: Missing tool.`);
       }
+
       if (!this.availableTools.has(step.tool)) {
         throw new Error(
           `Step ${index + 1}: Unknown tool "${step.tool}". Available tools: ${[...this.availableTools].join(", ")}.`,
         );
       }
+
       if (!step.input) {
         throw new Error(`Step ${index + 1}: Missing input.`);
       }
@@ -43,9 +52,10 @@ export class PlanValidator {
       this.validateInput(step.tool, step.input, index);
     });
   }
-  private validateInput(tool: string, input: ToolInput, index: number) {
+
+  private validateInput(tool: string, input: ToolInput, index: number): void {
     switch (tool) {
-      case "terminal":
+      case "terminal": {
         const command = input.command;
 
         if (typeof command !== "string" || command.trim() === "") {
@@ -57,9 +67,11 @@ export class PlanValidator {
             `Step ${index + 1}: Terminal command exceeds maximum length.`,
           );
         }
-        break;
 
-      case "file":
+        break;
+      }
+
+      case "file": {
         if (typeof input.path !== "string" || input.path.trim() === "") {
           throw new Error(`Step ${index + 1}: File path is required.`);
         }
@@ -74,18 +86,50 @@ export class PlanValidator {
             `Step ${index + 1}: Invalid file action. Allowed actions: ${this.allowedFileActions.join(", ")}.`,
           );
         }
-        break;
 
-      case "directory":
-        if (typeof input.path !== "string" || input.path.trim() === "") {
-          throw new Error(`Step ${index + 1}: Directory path is required.`);
+        break;
+      }
+
+      case "directory": {
+        const action = input.action;
+
+        // Action is required
+        if (typeof action !== "string" || action.trim() === "") {
+          throw new Error(`Step ${index + 1}: Directory action is required.`);
         }
-        break;
 
-      case "search":
+        // Validate action
+        if (
+          !this.allowedDirectoryActions.includes(
+            action as (typeof this.allowedDirectoryActions)[number],
+          )
+        ) {
+          throw new Error(
+            `Step ${index + 1}: Invalid directory action. Allowed actions: ${this.allowedDirectoryActions.join(", ")}.`,
+          );
+        }
+
+        // Path is required only for create
+        if (
+          action === "create" &&
+          (typeof input.path !== "string" || input.path.trim() === "")
+        ) {
+          throw new Error(
+            `Step ${index + 1}: Directory path is required for create.`,
+          );
+        }
+
+        break;
+      }
+
+      case "search": {
         if (typeof input.query !== "string" || input.query.trim() === "") {
           throw new Error(`Step ${index + 1}: Search query is required.`);
         }
+
+        break;
+      }
+      default:
         break;
     }
   }

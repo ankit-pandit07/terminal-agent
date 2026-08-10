@@ -1,27 +1,28 @@
-import type { Tool, ToolInfo, ToolInput, ToolOutput } from "../base/tool.interface.js";
+import type {
+  Tool,
+  ToolInfo,
+  ToolInput,
+  ToolOutput,
+} from "../base/tool.interface.js";
 import path from "path";
 import { promises as fs } from "fs";
 import type { SessionState } from "../../session/session.state.js";
 export class DirectoryTool implements Tool {
   name = "directory";
-  readonly info:ToolInfo = {
-  name: "directory",
-  displayName: "Directory",
-  description: "Create and manage directories",
+  readonly info: ToolInfo = {
+    name: "directory",
+    displayName: "Directory",
+    description: "Create and manage directories",
 
-  category: "filesystem",
+    category: "filesystem",
 
-  version: "1.0.0",
-  author: "NodeBase",
+    version: "1.0.0",
+    author: "NodeBase",
 
-  enabled: true,
+    enabled: true,
 
-  capabilities: [
-    "create",
-    "delete",
-    "list",
-  ],
-};
+    capabilities: ["create", "delete", "list"],
+  };
   description = "Browse directories and list files.";
 
   constructor(private session: SessionState) {}
@@ -34,8 +35,8 @@ export class DirectoryTool implements Tool {
       : currentDir;
 
     switch (action) {
-          case "create":
-    return this.create(target);
+      case "create":
+        return this.create(target);
 
       case "list":
         return this.list(target);
@@ -51,39 +52,36 @@ export class DirectoryTool implements Tool {
     }
   }
   private async create(dir: string): Promise<ToolOutput> {
-  try {
-    this.session.setLastTool("directory");
-this.session.clearLastError();
-    await fs.mkdir(dir, { recursive: true });
+    try {
+      this.session.setLastTool("directory");
+      this.session.clearLastError();
+      await fs.mkdir(dir, { recursive: true });
 
-    return {
-      success: true,
-      data: `Directory created: ${dir}`,
-    };
-  } catch (err: any) {
-    return {
-      success: false,
-      data: err.message,
-    };
+      return {
+        success: true,
+        data: `Directory created: ${dir}`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        data: err.message,
+      };
+    }
   }
-}
   private async list(dir: string): Promise<ToolOutput> {
     try {
+      this.session.setLastTool("directory");
+      this.session.clearLastError();
       const items = await fs.readdir(dir, {
         withFileTypes: true,
       });
 
-     const result = items
-  .map((item) => {
-    const icon = item.isDirectory() ? "📁" : "📄";
-    return `${icon} ${item.name}`;
-  })
-  .join("\n");
-
-return {
-  success: true,
-  data: result,
-};
+      const result = items
+        .map((item) => {
+          const icon = item.isDirectory() ? "📁" : "📄";
+          return `${icon} ${item.name}`;
+        })
+        .join("\n");
 
       return {
         success: true,

@@ -5,7 +5,7 @@ export class FileRule implements PlanningRule {
   name = "file";
 
   match(context: RuleContext): boolean {
-    const text = context.message.toLowerCase();
+    const text = context.message.toLowerCase().trim();
 
     return (
       text.startsWith("create file") ||
@@ -13,7 +13,8 @@ export class FileRule implements PlanningRule {
       text.startsWith("read ") ||
       text.startsWith("open ") ||
       text.startsWith("delete ") ||
-      text.startsWith("edit ")
+      text.startsWith("edit ") ||
+      text.startsWith("write ")
     );
   }
 
@@ -21,9 +22,8 @@ export class FileRule implements PlanningRule {
     const text = context.message.trim();
     const lower = text.toLowerCase();
 
-    // CREATE
     if (lower.startsWith("create")) {
-      const path = text
+      const filePath = text
         .replace(/^create\s+file/i, "")
         .replace(/^create/i, "")
         .trim();
@@ -32,13 +32,13 @@ export class FileRule implements PlanningRule {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
           steps: [
             {
               tool: "file",
               input: {
                 action: "create",
-                path,
+                path: filePath,
               },
             },
           ],
@@ -46,21 +46,20 @@ export class FileRule implements PlanningRule {
       };
     }
 
-    // READ
     if (lower.startsWith("read") || lower.startsWith("open")) {
-      const path = text.replace(/^read/i, "").replace(/^open/i, "").trim();
+      const filePath = text.replace(/^read/i, "").replace(/^open/i, "").trim();
 
       return {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
           steps: [
             {
               tool: "file",
               input: {
                 action: "read",
-                path,
+                path: filePath,
               },
             },
           ],
@@ -68,21 +67,20 @@ export class FileRule implements PlanningRule {
       };
     }
 
-    // DELETE
     if (lower.startsWith("delete")) {
-      const path = text.replace(/^delete/i, "").trim();
+      const filePath = text.replace(/^delete/i, "").trim();
 
       return {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
           steps: [
             {
               tool: "file",
               input: {
                 action: "delete",
-                path,
+                path: filePath,
               },
             },
           ],
@@ -90,21 +88,62 @@ export class FileRule implements PlanningRule {
       };
     }
 
-    // EDIT
-    if (lower.startsWith("edit")) {
-      const path = text.replace(/^edit/i, "").trim();
+    if (lower.startsWith("write")) {
+      const writeText = text.replace(/^write/i, "").trim();
+
+      const firstSpace = writeText.indexOf(" ");
+
+      if (firstSpace === -1) {
+        return {
+          matched: false,
+          confidence: 0,
+        };
+      }
+
+      const filePath = writeText.slice(0, firstSpace).trim();
+
+      const content = writeText.slice(firstSpace + 1);
+
+      if (!filePath || !content) {
+        return {
+          matched: false,
+          confidence: 0,
+        };
+      }
 
       return {
         matched: true,
         confidence: 1,
         plan: {
-             source: "rule",
+          source: "rule",
+          steps: [
+            {
+              tool: "file",
+              input: {
+                action: "write",
+                path: filePath,
+                content,
+              },
+            },
+          ],
+        },
+      };
+    }
+
+    if (lower.startsWith("edit")) {
+      const filePath = text.replace(/^edit/i, "").trim();
+
+      return {
+        matched: true,
+        confidence: 1,
+        plan: {
+          source: "rule",
           steps: [
             {
               tool: "file",
               input: {
                 action: "edit",
-                path,
+                path: filePath,
                 instruction: context.message,
               },
             },

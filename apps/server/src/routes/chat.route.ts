@@ -144,14 +144,21 @@ router.get("/memory/conversation/:conversationId",async(req,res,next)=>{
 
 router.post("/plan", async (req, res, next) => {
   try {
+    console.log("PLAN REQUEST:", req.body);
+
     const body = chatSchema.parse(req.body);
+
     const plan = await agent.createPlan(body.message);
+
+    console.log("PLAN RESULT:", plan);
 
     res.json({
       success: true,
       plan,
     });
   } catch (error) {
+    console.error("PLAN ERROR:", error);
+
     next(error);
   }
 });
