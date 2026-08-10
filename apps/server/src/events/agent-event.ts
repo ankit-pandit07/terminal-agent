@@ -19,6 +19,7 @@ export type AgentEvent =
   | {
       type: "completed";
       response: string;
+      converstionId:string
     }
   | {
       type: "error";

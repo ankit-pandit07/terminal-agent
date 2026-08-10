@@ -4,7 +4,7 @@ import type { Plan } from "../planner/planner.js";
 import type { ExecutionResult } from "../executor/executor.js";
 import type { ToolCategory } from "../tools/base/tool.interface.js";
 import { processAgentRequest } from "./process.js";
-import { deleteConversation, getConversation, getExecutions, getHistory } from "./conversation.js";
+import { deleteConversation, getConversation, getExecutions, getHistory, getExecution } from "./conversation.js";
 import { getWorkspace } from "./workspace.js";
 import { createPlan } from "./planning.js";
 import { executePlan } from "./execution.js";
@@ -32,6 +32,10 @@ export class AgentService {
 
   async getExecutions(conversationId: string) {
     return getExecutions(conversationId);
+  }
+
+  async getExecution(executionId:string){
+    return getExecution(executionId);
   }
 
   async getHistory() {

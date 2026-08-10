@@ -71,6 +71,16 @@ router.get("/conversations/:id", async (req, res, next) => {
   }
 });
 
+router.get("/executions/detail/:id",async (req,res,next)=>{
+  try {
+    const execution=await agent.getExecution(req.params.id)
+    res.json(execution);
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/executions/:conversationId", async (req, res, next) => {
   try {
     const executions = await agent.getExecutions(req.params.conversationId);

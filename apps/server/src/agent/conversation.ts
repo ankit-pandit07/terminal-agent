@@ -53,6 +53,16 @@ export async function getExecutions(conversationId: string) {
   return executionRepository.findByConversation(conversationId);
 }
 
+export async function getExecution(executionId:string){
+  const execution=await executionRepository.findById(executionId);
+
+  if(!execution){
+    throw new Error("Execution not found");
+  }
+
+  return execution;
+}
+
 export async function getHistory() {
   return conversationRepository.findAll();
 }
