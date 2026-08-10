@@ -10,10 +10,13 @@ import { createPlan } from "./planning.js";
 import { executePlan } from "./execution.js";
 import { disableTool, enableTool, getTool, getTools, getToolsByCategory } from "./tools.js";
 import { getSession } from "./session.js";
+import { MemoryService } from "../memory/memory.service.js";
 
 
 export class AgentService {
   // Public API - Sirf delegate karega
+  private memoryService=new MemoryService();
+
 
   async process(
     request: AgentRequest,
@@ -79,5 +82,15 @@ export class AgentService {
 
   getToolsByCategory(category: ToolCategory) {
     return getToolsByCategory(category);
+  }
+
+  async getMemoryHistory(){
+    return this.memoryService.history();
+  }
+
+  async getConversationMemory(
+    conversationId:string,
+  ){
+    return this.memoryService.getByConversation(conversationId)
   }
 }

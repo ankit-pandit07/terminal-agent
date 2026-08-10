@@ -117,6 +117,31 @@ router.get("/workspace", async (_, res, next) => {
   }
 });
 
+router.get("/memory",async (_, res, next)=>{
+  try{
+    const memory=await agent.getMemoryHistory();
+
+    res.json({
+      success:true,
+      memory
+    });
+  }catch(error){
+    next(error);
+  }
+});
+
+router.get("/memory/conversation/:conversationId",async(req,res,next)=>{
+  try{
+    const memory=await agent.getConversationMemory(req.params.conversationId)
+    res.json({
+      success:true,
+      memory
+    })
+  }catch(error){
+    next(error);
+  }
+})
+
 router.post("/plan", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);

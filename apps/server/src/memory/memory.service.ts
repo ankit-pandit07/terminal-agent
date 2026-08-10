@@ -94,4 +94,12 @@ export class MemoryService {
       conversationId,
     );
   }
+
+  async getByConversation(
+    conversationId:string,
+  ){
+    return this.repository.search({
+      conversationId,
+    })
+  }
 }
