@@ -12,37 +12,49 @@ interface ConversationStore {
   selectedConversationId?: string;
 
   setConversations: (items: Conversation[]) => void;
+  addConversation: (conversation: Conversation) => void;
   selectConversation: (id: string) => void;
   removeConversation: (id: string) => void;
   clearSelection: () => void;
 }
 
+export const useConversationStore =
+  create<ConversationStore>((set) => ({
+    conversations: [],
 
+    selectedConversationId: undefined,
 
-export const useConversationStore = create<ConversationStore>((set) => ({
-  conversations: [],
+    setConversations: (items) =>
+      set({
+        conversations: items,
+      }),
 
-  selectedConversationId: undefined,
+    addConversation: (conversation) =>
+      set((state) => ({
+        conversations: [
+          conversation,
+          ...state.conversations.filter(
+            (item) => item.id !== conversation.id
+          ),
+        ],
+      })),
 
-  setConversations: (items) =>
-    set({
-      conversations: items,
-    }),
+    selectConversation: (id) =>
+      set({
+        selectedConversationId: id,
+      }),
 
-  selectConversation: (id) =>
-    set({
-      selectedConversationId: id,
-    }),
+    removeConversation: (id) =>
+      set((state) => ({
+        conversations:
+          state.conversations.filter(
+            (conversation) =>
+              conversation.id !== id
+          ),
+      })),
 
-  removeConversation: (id) =>
-    set((state) => ({
-      conversations: state.conversations.filter(
-        (conversation) => conversation.id !== id,
-      ),
-    })),
-
-  clearSelection: () =>
-    set({
-      selectedConversationId: undefined,
-    }),
-}));
+    clearSelection: () =>
+      set({
+        selectedConversationId: undefined,
+      }),
+  }));

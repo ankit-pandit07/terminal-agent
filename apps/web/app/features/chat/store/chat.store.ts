@@ -22,7 +22,7 @@ interface ChatStore {
   setLoading: (loading: boolean) => void;
 
   conversationId?: string;
-  setConversationId: (id?: string) => void;
+  setConversationId: (id: string) => void;
 
   clear: () => void;
 }

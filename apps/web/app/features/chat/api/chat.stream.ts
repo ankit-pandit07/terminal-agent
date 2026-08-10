@@ -1,5 +1,6 @@
 export interface StreamEvent {
   type: string;
+  conversationId?: string;
   [key: string]: unknown;
 }
 
@@ -73,6 +74,7 @@ export async function streamChat(
 
         onEvent({
           type: eventType || parsed.type || "message",
+
           ...parsed,
         });
       } catch (error) {
