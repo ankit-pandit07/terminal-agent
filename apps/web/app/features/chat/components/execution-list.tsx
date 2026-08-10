@@ -1,16 +1,20 @@
 "use client";
 
-import { Execution } from "../api/execution.api";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
+
+import type { Execution } from "../api/execution.api";
 
 interface Props {
   executions: Execution[];
 }
 
 export function ExecutionList({ executions }: Props) {
+  const router = useRouter();
+
   if (executions.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-500">
         No executions yet.
       </div>
     );
@@ -24,13 +28,15 @@ export function ExecutionList({ executions }: Props) {
         const failed = execution.status === "FAILED";
 
         return (
-          <div
+          <button
             key={execution.id}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            type="button"
+            onClick={() => router.push(`/executions/${execution.id}`)}
+            className="w-full cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-left transition hover:border-zinc-600 hover:bg-zinc-800"
           >
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-white">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-white">
                   {execution.goal}
                 </p>
 
@@ -41,7 +47,7 @@ export function ExecutionList({ executions }: Props) {
 
               <span
                 className={clsx(
-                  "rounded-full px-2.5 py-1 text-xs font-medium",
+                  "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
                   completed && "bg-green-500/10 text-green-400",
                   failed && "bg-red-500/10 text-red-400",
                   !completed && !failed && "bg-yellow-500/10 text-yellow-400",
@@ -77,7 +83,7 @@ export function ExecutionList({ executions }: Props) {
                 </div>
               </div>
             )}
-          </div>
+          </button>
         );
       })}
     </div>

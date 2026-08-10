@@ -27,3 +27,10 @@ export async function getExecutions(
     );
     return data;
 }
+
+export async function getExecution(executionId:string){
+    const {data}=await api.get<Execution>(
+        `/chat/executions/detail/${executionId}`
+    )
+    return data;
+}
