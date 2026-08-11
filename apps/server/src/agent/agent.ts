@@ -9,6 +9,8 @@ export interface AgentResponse {
   success: boolean;
   response: string;
   conversationId: string;
+  requiresConfirmation?: boolean;
+  confirmationId?: string;
 }
 
 export type { AgentEventEmitter };

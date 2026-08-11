@@ -45,6 +45,25 @@ router.post("/", async (req, res, next) => {
     next(error);
   }
 });
+
+router.post("/confirm/:confirmationId",async(req,res,next)=>{
+  try {
+    const result=await agent.confirmExecution(req.params.confirmationId);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/cancel/:confirmationId", async(req,res,next)=>{
+  try {
+    const result=agent.cancelConfirmation(req.params.confirmationId);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/conversations", async (_, res, next) => {
   try {
     const history = await agent.getHistory();
@@ -71,11 +90,10 @@ router.get("/conversations/:id", async (req, res, next) => {
   }
 });
 
-router.get("/executions/detail/:id",async (req,res,next)=>{
+router.get("/executions/detail/:id", async (req, res, next) => {
   try {
-    const execution=await agent.getExecution(req.params.id)
+    const execution = await agent.getExecution(req.params.id);
     res.json(execution);
-
   } catch (error) {
     next(error);
   }
@@ -117,48 +135,40 @@ router.get("/workspace", async (_, res, next) => {
   }
 });
 
-router.get("/memory",async (_, res, next)=>{
-  try{
-    const memory=await agent.getMemoryHistory();
+router.get("/memory", async (_, res, next) => {
+  try {
+    const memory = await agent.getMemoryHistory();
 
     res.json({
-      success:true,
-      memory
+      success: true,
+      memory,
     });
-  }catch(error){
+  } catch (error) {
     next(error);
   }
 });
 
-router.get("/memory/conversation/:conversationId",async(req,res,next)=>{
-  try{
-    const memory=await agent.getConversationMemory(req.params.conversationId)
+router.get("/memory/conversation/:conversationId", async (req, res, next) => {
+  try {
+    const memory = await agent.getConversationMemory(req.params.conversationId);
     res.json({
-      success:true,
-      memory
-    })
-  }catch(error){
+      success: true,
+      memory,
+    });
+  } catch (error) {
     next(error);
   }
-})
+});
 
 router.post("/plan", async (req, res, next) => {
   try {
-    console.log("PLAN REQUEST:", req.body);
-
     const body = chatSchema.parse(req.body);
-
     const plan = await agent.createPlan(body.message);
-
-    console.log("PLAN RESULT:", plan);
-
     res.json({
       success: true,
       plan,
     });
   } catch (error) {
-    console.error("PLAN ERROR:", error);
-
     next(error);
   }
 });
@@ -166,20 +176,14 @@ router.post("/plan", async (req, res, next) => {
 router.post("/execute", async (req, res, next) => {
   try {
     const body = executeSchema.parse(req.body);
-
     const plan: Plan = {
-      source:"rule",
+      source: "rule",
       steps: body.plan.steps.map((step) => ({
         tool: step.tool,
         input: step.input as ToolInput,
 
-        ...(step.reason !== undefined
-          ? { reason: step.reason }
-          : {}),
-
-        ...(step.priority !== undefined
-          ? { priority: step.priority }
-          : {}),
+        ...(step.reason !== undefined ? { reason: step.reason } : {}),
+        ...(step.priority !== undefined ? { priority: step.priority } : {}),
       })),
     };
 
@@ -200,11 +204,9 @@ router.post("/stream", async (req, res, next) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-
     res.flushHeaders();
 
     const emitter = new AgentEventEmitter();
-
     emitter.on("event", (event) => {
       res.write(`event: ${event.type}\n`);
       res.write(`data: ${JSON.stringify(event)}\n\n`);

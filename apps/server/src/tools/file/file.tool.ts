@@ -259,8 +259,20 @@ export class FileTool implements Tool {
       case "write":
         return this.write(filePath, String(input.content ?? ""));
 
-      case "delete":
-        return this.deleteFile(filePath);
+      case "delete": 
+      case "remove": {
+        const filePath = this.resolvePath(String(input.path));
+
+        await fs.unlink(filePath);
+
+        this.session.setLastTool("file");
+        this.session.clearLastError();
+
+        return {
+          success: true,
+          data: `File deleted: ${filePath}`,
+        };
+      }
 
       case "edit": {
         const oldText = String(input.oldText ?? "");

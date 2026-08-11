@@ -4,19 +4,31 @@ import type { Plan } from "../planner/planner.js";
 import type { ExecutionResult } from "../executor/executor.js";
 import type { ToolCategory } from "../tools/base/tool.interface.js";
 import { processAgentRequest } from "./process.js";
-import { deleteConversation, getConversation, getExecutions, getHistory, getExecution } from "./conversation.js";
+import {
+  deleteConversation,
+  getConversation,
+  getExecutions,
+  getHistory,
+  getExecution,
+} from "./conversation.js";
 import { getWorkspace } from "./workspace.js";
 import { createPlan } from "./planning.js";
 import { executePlan } from "./execution.js";
-import { disableTool, enableTool, getTool, getTools, getToolsByCategory } from "./tools.js";
+import {
+  disableTool,
+  enableTool,
+  getTool,
+  getTools,
+  getToolsByCategory,
+} from "./tools.js";
 import { getSession } from "./session.js";
 import { MemoryService } from "../memory/memory.service.js";
-
+import { confirmationService } from "../executor/confirmation.instance.js";
+import { executor } from "../executor/executor.instance.js";
 
 export class AgentService {
   // Public API - Sirf delegate karega
-  private memoryService=new MemoryService();
-
+  private memoryService = new MemoryService();
 
   async process(
     request: AgentRequest,
@@ -37,7 +49,7 @@ export class AgentService {
     return getExecutions(conversationId);
   }
 
-  async getExecution(executionId:string){
+  async getExecution(executionId: string) {
     return getExecution(executionId);
   }
 
@@ -84,13 +96,58 @@ export class AgentService {
     return getToolsByCategory(category);
   }
 
-  async getMemoryHistory(){
+  async getMemoryHistory() {
     return this.memoryService.history();
   }
 
-  async getConversationMemory(
-    conversationId:string,
-  ){
-    return this.memoryService.getByConversation(conversationId)
+  async getConversationMemory(conversationId: string) {
+    return this.memoryService.getByConversation(conversationId);
+  }
+
+  async confirmExecution(
+    confirmationId: string,
+    emitter?: AgentEventEmitter,
+  ): Promise<{
+    success: boolean;
+    response: string;
+  }> {
+    const confirmation = confirmationService.confirm(confirmationId);
+
+    if (!confirmation) {
+      return {
+        success: false,
+        response: "Confirmation not found or it has already been handled.",
+      };
+    }
+
+    const result = await executor.execute(
+      confirmation.executionId,
+      confirmation.plan,
+      emitter,
+    );
+
+    return {
+      success: result.success,
+      response: result.output,
+    };
+  }
+
+  cancelConfirmation(confirmationId: string): {
+    success: boolean;
+    response: string;
+  } {
+    const cancelled = confirmationService.cancel(confirmationId);
+
+    if (!cancelled) {
+      return {
+        success: false,
+        response: "Confirmation not found or it has already been handled.",
+      };
+    }
+
+    return {
+      success: true,
+      response: "Confirmation cancelled. No action was executed.",
+    };
   }
 }

@@ -9,6 +9,7 @@ export class PlanValidator {
     "edit",
     "create",
     "delete",
+    "remove"
   ] as const;
 
   private readonly allowedDirectoryActions = [

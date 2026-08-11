@@ -20,7 +20,8 @@ import { ContextRetriever } from "../context/retriever/context.retriever.js";
 import { PlannerRouter } from "../planner/router/router.js";
 import { MemoryService } from "../memory/memory.service.js"; // Add this import
 import { buildMemoryContext } from "../memory/memory-context.js";
-
+import { SafetyService } from "../executor/safety.service.js";
+import { confirmationService } from "../executor/confirmation.instance.js";
 // Services - Initialized once and shared
 
 const conversationRepository = new ConversationRepository();
@@ -36,6 +37,7 @@ const verifier = new VerificationService();
 const observationService = new ObservationService();
 const goalService = new GoalService();
 const memoryService = new MemoryService();
+const safetyService = new SafetyService();
 const MAX_ITERATIONS = 5;
 
 export async function processAgentRequest(
@@ -108,8 +110,7 @@ ${executionHistory}
         decision: route.decision,
       });
 
-const memoryContext =
-  await buildMemoryContext(request.message);
+      const memoryContext = await buildMemoryContext(request.message);
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,
@@ -125,6 +126,37 @@ const memoryContext =
         type: "plan-created",
         steps: plan.steps.length,
       });
+
+      //Safety check
+      const safetyResults = safetyService.checkPlan(plan);
+      const dangeoursStep = safetyResults.find(
+        (result) => result.requiresConfirmation,
+      );
+
+      if (dangeoursStep) {
+        const message = `Confirmation required: ${dangeoursStep.reason}`;
+
+        const pending = confirmationService.create(
+          execution.id,
+          conversation.id,
+          plan,
+          message,
+        );
+
+        emit(emitter, {
+          type: "confirmation-required",
+          confirmationId: pending.id,
+          message: pending.message,
+        });
+
+        return {
+          success: false,
+          response: message,
+          conversationId: conversation.id,
+          requiresConfirmation: true,
+          confirmationId: pending.id,
+        };
+      }
 
       const result = await executor.execute(execution.id, plan, emitter);
       lastObservation = result.observation;
