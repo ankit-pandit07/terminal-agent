@@ -47,6 +47,7 @@ ${observation.facts.join("\n")}
 
 export function buildPlannerPrompt(
   history: string,
+  memoryContext:string,
   message: string,
   observation: Observation | undefined,
   projectContext: string,
@@ -283,11 +284,34 @@ Correct Plan
   ]
 }
   
-Conversation Context (Most Important)
+Conversation History
 
-${history}
+${history || "No previous conversation history available."}
 
-The Conversation Context is the primary source of truth for resolving references such as "it", "that", "same file", "there", and previous requests.
+Use conversation history only to understand previous user requests,
+assistant responses, and references such as "it", "that", "there",
+"same file", and "previous folder".
+
+Agent Memory
+
+${memoryContext || "No relevant agent memory available."}
+
+Use Agent Memory only when it is relevant to the current request.
+
+Agent Memory may contain:
+- Previous tool executions
+- Previous execution results
+- Previous failures
+- Recovery suggestions
+- File patches
+- Rollback events
+- Workspace information
+
+Do not blindly trust old memory.
+Prefer current workspace state and current observations over stale memory.
+
+Do not repeat a previously failed action unless the underlying cause
+has been fixed or the new attempt has a reasonable chance of success.
 
 Project Context:
 ${projectContext || "Unknown"}

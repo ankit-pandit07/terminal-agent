@@ -19,6 +19,7 @@ import { GoalService } from "../goal/goal.service.js";
 import { ContextRetriever } from "../context/retriever/context.retriever.js";
 import { PlannerRouter } from "../planner/router/router.js";
 import { MemoryService } from "../memory/memory.service.js"; // Add this import
+import { buildMemoryContext } from "../memory/memory-context.js";
 
 // Services - Initialized once and shared
 
@@ -107,9 +108,12 @@ ${executionHistory}
         decision: route.decision,
       });
 
+const memoryContext =
+  await buildMemoryContext(request.message);
       const plan = await planner.createPlan(
         request.message,
         plannerHistory,
+        memoryContext,
         workspace,
         retrievedContext,
         sessionContext,

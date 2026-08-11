@@ -1,15 +1,12 @@
-
 import { prisma } from "../../db/prisma.js";
 import type {
   CreateMemoryInput,
+  MemoryRecord,
   MemorySearchOptions,
 } from "./memory.types.js";
 
 export class MemoryRepository {
-
-  async create(
-    input: CreateMemoryInput,
-  ) {
+  async create(input: CreateMemoryInput) {
     return prisma.agentMemory.create({
       data: {
         conversationId: input.conversationId ?? null,
@@ -29,33 +26,59 @@ export class MemoryRepository {
     });
   }
 
- async search(options: MemorySearchOptions) {
+  async search(options: MemorySearchOptions): Promise<MemoryRecord[]> {
+    const where: any = {};
 
-  const where: any = {};
+    if (options.conversationId) {
+      where.conversationId = options.conversationId;
+    }
 
-  if (options.conversationId) {
-    where.conversationId = options.conversationId;
+    if (options.executionId) {
+      where.executionId = options.executionId;
+    }
+
+    if (options.type) {
+      where.type = options.type;
+    }
+
+    if (options.key) {
+      where.key = { contains: options.key, mode: "insensitive" };
+    }
+
+    if (options.query) {
+      where.OR = [
+        {
+          key: {
+            contains: options.query,
+            mode: "insensitive",
+          },
+        },
+        {
+          value: {
+            contains: options.query,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+    const memories = await prisma.agentMemory.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 20,
+    });
+
+    return memories.map((memory) => ({
+      id: memory.id,
+      conversationId: memory.conversationId,
+      executionId: memory.executionId,
+      type: memory.type as MemoryRecord["type"],
+      key: memory.key,
+      value: memory.value,
+      createdAt: memory.createdAt,
+    }));
   }
-
-  if (options.executionId) {
-    where.executionId = options.executionId;
-  }
-
-  if (options.type) {
-    where.type = options.type;
-  }
-
-  if (options.key) {
-    where.key = options.key;
-  }
-
-  return prisma.agentMemory.findMany({
-    where,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-}
 
   async findRecent(limit = 20) {
     return prisma.agentMemory.findMany({
@@ -74,9 +97,7 @@ export class MemoryRepository {
     });
   }
 
-  async clearConversation(
-    conversationId: string,
-  ) {
+  async clearConversation(conversationId: string) {
     return prisma.agentMemory.deleteMany({
       where: {
         conversationId,

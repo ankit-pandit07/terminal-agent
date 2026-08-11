@@ -178,6 +178,7 @@ ${Object.entries(workspace.scripts)
   async createPlan(
     message: string,
     history: string,
+     memoryContext: string,
     workspace: WorkspaceInfo,
     retrievedContext: RetrievedContext,
     sessionContext: string,
@@ -207,6 +208,7 @@ ${Object.entries(workspace.scripts)
 
     const prompt = buildPlannerPrompt(
       history,
+      memoryContext,
       message,
       observation,
       projectContext,

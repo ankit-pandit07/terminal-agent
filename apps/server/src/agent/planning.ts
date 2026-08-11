@@ -4,6 +4,7 @@ import type { Plan } from "../planner/planner.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
 import { ContextRetriever } from "../context/retriever/context.retriever.js";
 import { buildSessionContext } from "./session.js";
+import { buildMemoryContext } from "../memory/memory-context.js";
 
 const planner = new PlannerService();
 const validator = new PlanValidator();
@@ -14,11 +15,9 @@ export async function createPlan(
   message: string,
 ): Promise<Plan> {
   const workspace = await workspaceService.analyze();
-
   const history = "";
-
   const sessionContext = buildSessionContext();
-
+  const memoryContext=await buildMemoryContext(message);
   const retrievedContext = await contextRetriever.retrieve(
     message,
   );
@@ -26,6 +25,7 @@ export async function createPlan(
   const plan = await planner.createPlan(
     message,
     history,
+    memoryContext,
     workspace,
     retrievedContext,
     sessionContext,
