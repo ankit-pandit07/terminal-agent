@@ -6,6 +6,8 @@ export interface ExecutionResult {
   success: boolean;
   output: string;
   observation: Observation;
+  requiresConfirmation?: boolean;
+  confirmationId?: string;
 }
 
 export interface Executor {

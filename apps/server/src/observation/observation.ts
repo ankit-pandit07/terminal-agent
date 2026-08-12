@@ -3,15 +3,10 @@ export type ObservationSeverity = "info" | "warning" | "error";
 
 export interface Reflection {
   success: boolean;
-
   rootCause: string;
-
   lesson: string;
-
   nextAction: string;
-
   confidence: number;
-
   shouldRetry:boolean;
 }
 

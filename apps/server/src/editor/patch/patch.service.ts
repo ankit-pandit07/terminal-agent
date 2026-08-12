@@ -5,9 +5,7 @@ import { PatchValidator } from "./patch.validator.js";
 
 export class PatchService {
   private generator = new PatchGenerator();
-
   private validator = new PatchValidator();
-
   private applier = new PatchApplier();
 
   apply(oldContent: string, newContent: string): PatchResult {

@@ -9,9 +9,14 @@ import { promises as fs } from "fs";
 import path from "node:path";
 import { SessionState } from "../../session/session.state.js";
 import { PatchService } from "../../editor/patch/patch.service.js";
+import { BackupService } from "../../editor/rollback/backup.service.js";
+import { RollbackService } from "../../editor/rollback/rollback.service.js";
 
 export class FileTool implements Tool {
   name = "file";
+
+  private backupService = new BackupService();
+  private rollbackService = new RollbackService();
 
   readonly info: ToolInfo = {
     name: "file",
@@ -160,13 +165,15 @@ export class FileTool implements Tool {
     oldText: string,
     newText: string,
   ): Promise<ToolOutput> {
+    let backup;
+
     try {
       const resolvedPath = this.resolvePath(filePath);
 
-      // Read the current file content
+      // 1. Read current content
       const oldContent = await fs.readFile(resolvedPath, "utf-8");
 
-      // Check if the old text exists
+      // 2. Check old text
       if (!oldContent.includes(oldText)) {
         return {
           success: false,
@@ -174,10 +181,9 @@ export class FileTool implements Tool {
         };
       }
 
-      // Replace the text
+      // 3. Generate new content
       const newContent = oldContent.replace(oldText, newText);
 
-      // Check if any changes were made
       if (oldContent === newContent) {
         return {
           success: false,
@@ -185,33 +191,47 @@ export class FileTool implements Tool {
         };
       }
 
-      // Apply patch validation if needed
-      try {
-        const patchService = new PatchService();
-        const result = patchService.apply(oldContent, newContent);
+      // 4. Create backup BEFORE modifying file
+      backup = await this.backupService.create(resolvedPath);
 
-        if (!result.success) {
-          return {
-            success: false,
-            data: "Patch validation failed.",
-          };
-        }
+      // 5. Apply and validate patch
+      const patchService = new PatchService();
 
-        // Write the patched content
-        await fs.writeFile(resolvedPath, result.content, "utf-8");
-      } catch (patchError) {
-        // If PatchService is not available, just write the new content directly
-        console.warn(
-          "PatchService not available, writing directly:",
-          patchError,
-        );
-        await fs.writeFile(resolvedPath, newContent, "utf-8");
+      const patchResult = patchService.apply(oldContent, newContent);
+
+      if (!patchResult.success) {
+        await this.rollbackService.restore(backup);
+
+        return {
+          success: false,
+          data: "Patch validation failed. Original file restored.",
+        };
       }
 
-      // Update session state
+      // 6. Write patched content
+      await fs.writeFile(resolvedPath, patchResult.content, "utf-8");
+
+      // 7. Verify actual file content
+      const verifiedContent = await fs.readFile(resolvedPath, "utf-8");
+
+      if (verifiedContent !== patchResult.content) {
+        const rollback = await this.rollbackService.restore(backup);
+
+        return {
+          success: false,
+          data: rollback.success
+            ? "File verification failed. Original file restored."
+            : `File verification failed and rollback failed: ${rollback.message}`,
+        };
+      }
+
+      // 8. Update session
       this.session.setLastTool("file");
       this.session.addModifiedFile(resolvedPath);
       this.session.clearLastError();
+
+      // 9. Backup is no longer needed
+      await this.backupService.delete(backup);
 
       return {
         success: true,
@@ -221,6 +241,27 @@ export class FileTool implements Tool {
       const message =
         error instanceof Error ? error.message : "Failed to edit file.";
 
+      // 10. Automatic rollback on unexpected failure
+      if (backup) {
+        const rollback = await this.rollbackService.restore(backup);
+
+        if (!rollback.success) {
+          this.session.setLastError(`${message}. ${rollback.message}`);
+
+          return {
+            success: false,
+            data: `${message}. Rollback also failed: ${rollback.message}`,
+          };
+        }
+
+        this.session.setLastError(`${message}. Original file restored.`);
+
+        return {
+          success: false,
+          data: `${message}. Original file restored.`,
+        };
+      }
+
       this.session.setLastError(message);
 
       return {
@@ -229,7 +270,6 @@ export class FileTool implements Tool {
       };
     }
   }
-
   async execute(input: ToolInput): Promise<ToolOutput> {
     const action = String(input.action ?? "").trim();
 
@@ -259,7 +299,7 @@ export class FileTool implements Tool {
       case "write":
         return this.write(filePath, String(input.content ?? ""));
 
-      case "delete": 
+      case "delete":
       case "remove": {
         const filePath = this.resolvePath(String(input.path));
 
