@@ -24,6 +24,13 @@ interface ChatStore {
   conversationId?: string;
   setConversationId: (id: string) => void;
 
+  confirmationId?: string;
+  confirmationMessage?: string;
+
+  setConfirmation: (id: string, message: string) => void;
+
+  clearConfirmation: () => void;
+
   clear: () => void;
 }
 
@@ -85,11 +92,29 @@ export const useChatStore = create<ChatStore>((set) => ({
       conversationId: id,
     }),
 
+  confirmationId: undefined,
+
+  confirmationMessage: undefined,
+
+  setConfirmation: (id, message) =>
+    set({
+      confirmationId: id,
+      confirmationMessage: message,
+    }),
+
+  clearConfirmation: () =>
+    set({
+      confirmationId: undefined,
+      confirmationMessage: undefined,
+    }),
+
   clear: () =>
     set({
       messages: [],
       events: [],
       loading: false,
       conversationId: undefined,
+      confirmationId: undefined,
+      confirmationMessage: undefined,
     }),
 }));

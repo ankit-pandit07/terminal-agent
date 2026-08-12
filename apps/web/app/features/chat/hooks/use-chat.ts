@@ -16,6 +16,8 @@ export function useChat() {
   const addUserMessage = useChatStore((s) => s.addUserMessage);
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
   const addEvent = useChatStore((s) => s.addEvent);
+  const setConfirmation = useChatStore((s) => s.setConfirmation);
+  const clearConfirmation = useChatStore((s) => s.clearConfirmation);
   const addConversation = useConversationStore((s) => s.addConversation);
   const selectConversation = useConversationStore((s) => s.selectConversation);
 
@@ -34,6 +36,21 @@ export function useChat() {
         async (event) => {
           addEvent(event);
 
+          if (event.type === "confirmation-required") {
+            const confirmationId =
+              typeof event.confirmationId === "string"
+                ? event.confirmationId
+                : undefined;
+            const message =
+              typeof event.message === "string"
+                ? event.message
+                : "Confirmation required.";
+
+            if (confirmationId) {
+              setConfirmation(confirmationId, message);
+            }
+            return;
+          }
           if (event.type !== "completed") {
             return;
           }
