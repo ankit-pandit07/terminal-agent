@@ -111,7 +111,7 @@ export class AgentService {
     success: boolean;
     response: string;
   }> {
-    const confirmation = confirmationService.confirm(confirmationId);
+    const confirmation = confirmationService.get(confirmationId);
 
     if (!confirmation) {
       return {
@@ -125,6 +125,9 @@ export class AgentService {
       confirmation.plan,
       emitter,
     );
+    if(result.success){
+      confirmationService.remove(confirmationId)
+    }
 
     return {
       success: result.success,

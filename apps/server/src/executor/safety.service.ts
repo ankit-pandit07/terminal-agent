@@ -88,21 +88,22 @@ export class SafetyService {
       .trim()
       .toLowerCase();
 
-    const dangerousPatterns = [
-      "rm ",
-      "rm -rf",
-      "rm -r",
-      "rmdir",
-      "del /s",
-      "del /f",
-      "format ",
-      "drop database",
-      "drop table",
-      "git reset --hard",
-      "git clean -fd",
-      "docker system prune",
-      "docker volume prune",
-    ];
+     const dangerousPatterns = [
+    "rm ",
+    "rm -rf",
+    "rm -r",
+    "rmdir",
+    "del ",
+    "del /s",
+    "del /f",
+    "format ",
+    "drop database",
+    "drop table",
+    "git reset --hard",
+    "git clean -fd",
+    "docker system prune",
+    "docker volume prune",
+  ];
     const matchedPattern = dangerousPatterns.find((pattern) =>
       command.includes(pattern),
     );

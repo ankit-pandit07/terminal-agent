@@ -28,6 +28,10 @@ export class ConfirmationService {
     return this.pending.get(id);
   }
 
+  remove(id: string): boolean {
+  return this.pending.delete(id);
+}
+
   confirm(id: string): PendingConfirmation | undefined {
     const confirmation = this.pending.get(id);
 
