@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { createPlan, executePlan, type Plan } from "../api/planning.api";
+
+import {
+  createPlan,
+  executePlan,
+  type Plan,
+  type PlanExecutionResult,
+} from "../api/planning.api";
+
+import { confirmAction, cancelAction } from "../api/chat.api";
 
 export function usePlanner() {
   const [plan, setPlan] = useState<Plan | null>(null);
-
-  const [result, setResult] = useState<{
-    success: boolean;
-    output: string;
-    observation: unknown;
-  } | null>(null);
-
+  const [result, setResult] = useState<PlanExecutionResult | null>(null);
   const [loading, setLoading] = useState(false);
-
   const [executing, setExecuting] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
 
   async function generatePlan(message: string) {
@@ -27,10 +27,8 @@ export function usePlanner() {
 
     try {
       const generatedPlan = await createPlan(message);
-
       setPlan(generatedPlan);
     } catch (error) {
-      console.error("Failed to create plan:", error);
 
       setError("Failed to create plan.");
     } finally {
@@ -49,9 +47,58 @@ export function usePlanner() {
 
       setResult(executionResult);
     } catch (error) {
-      console.error("Failed to execute plan:", error);
 
       setError("Failed to execute plan.");
+    } finally {
+      setExecuting(false);
+    }
+  }
+
+  async function confirmPlan() {
+    if (!result?.confirmationId || !result.requiresConfirmation) {
+      return;
+    }
+
+    setExecuting(true);
+    setError(null);
+
+    try {
+      const response = await confirmAction(result.confirmationId);
+
+      setResult({
+        success: Boolean(response.success),
+        output: String(response.response ?? "Action completed."),
+        observation: response.observation ?? null,
+      });
+    } catch (error) {
+      console.error("Failed to confirm plan:", error);
+
+      setError("Failed to confirm the action.");
+    } finally {
+      setExecuting(false);
+    }
+  }
+
+  async function cancelPlan() {
+    if (!result?.confirmationId || !result.requiresConfirmation) {
+      return;
+    }
+
+    setExecuting(true);
+    setError(null);
+
+    try {
+      const response = await cancelAction(result.confirmationId);
+
+      setResult({
+        success: false,
+        output: String(response.response ?? "Action cancelled."),
+        observation: response.observation ?? null,
+      });
+    } catch (error) {
+      console.error("Failed to cancel plan:", error);
+
+      setError("Failed to cancel the action.");
     } finally {
       setExecuting(false);
     }
@@ -69,8 +116,13 @@ export function usePlanner() {
     loading,
     executing,
     error,
+
     generatePlan,
     runPlan,
+
+    confirmPlan,
+    cancelPlan,
+
     clear,
   };
 }

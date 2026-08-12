@@ -12,6 +12,14 @@ export interface Plan {
   steps: PlanStep[];
 }
 
+export interface PlanExecutionResult {
+  success: boolean;
+  output: string;
+  observation: unknown;
+  requiresConfirmation?: boolean;
+  confirmationId?: string;
+}
+
 export async function createPlan(message: string) {
   const { data } = await api.post<{
     success: boolean;
@@ -23,14 +31,12 @@ export async function createPlan(message: string) {
   return data.plan;
 }
 
-export async function executePlan(plan: Plan) {
+export async function executePlan(
+  plan: Plan,
+): Promise<PlanExecutionResult> {
   const { data } = await api.post<{
     success: boolean;
-    result: {
-      success: boolean;
-      output: string;
-      observation: unknown;
-    };
+    result: PlanExecutionResult;
   }>("/chat/execute", {
     plan,
   });
