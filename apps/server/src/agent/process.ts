@@ -22,6 +22,7 @@ import { MemoryService } from "../memory/memory.service.js"; // Add this import
 import { buildMemoryContext } from "../memory/memory-context.js";
 import { SafetyService } from "../executor/safety.service.js";
 import { confirmationService } from "../executor/confirmation.instance.js";
+import { RecoveryService } from "../recovery/recovery.service.js";
 // Services - Initialized once and shared
 
 const conversationRepository = new ConversationRepository();
@@ -38,6 +39,9 @@ const observationService = new ObservationService();
 const goalService = new GoalService();
 const memoryService = new MemoryService();
 const safetyService = new SafetyService();
+
+const recoveryService = new RecoveryService();
+
 const MAX_ITERATIONS = 5;
 
 export async function processAgentRequest(
@@ -45,6 +49,7 @@ export async function processAgentRequest(
   emitter?: AgentEventEmitter,
 ): Promise<AgentResponse> {
   let execution: { id: string } | null = null;
+  let recoveryAttempted = false;
   const sessionState = executor.getSession();
   try {
     // Create Conversation
@@ -208,7 +213,9 @@ ${executionHistory}
         reflection: lastReflection,
       });
 
-      const verification = verifier.verify(plan, result.observation);
+      const verification = recoveryAttempted
+  ? verifier.verifyGoal(request.message, result.observation)
+  : verifier.verify(plan, result.observation);
       const retry = shouldRetry(
         verification,
         result.observation,
@@ -223,10 +230,22 @@ ${executionHistory}
       });
 
       if (retry) {
-        const recoveryKey = `${result.observation.tool}:${result.observation.summary}`;
-        const recoveryHistory = sessionState.getRecoveryHistory();
+        const recovery = recoveryService.decide(result.observation);
 
-        if (recoveryHistory.includes(recoveryKey)) {
+        emit(emitter, {
+          type: "recovery",
+          action: recovery.action,
+          reason: recovery.reason,
+          confidence: recovery.confidence,
+        });
+
+        const recoveryKey = [
+          result.observation.tool,
+          result.observation.summary,
+          recovery.action,
+        ].join(":");
+
+        if (sessionState.getRecoveryHistory().includes(recoveryKey)) {
           executionHistory = appendObservation(
             executionHistory,
             result.observation,
@@ -235,16 +254,33 @@ ${executionHistory}
           return failExecution(
             execution.id,
             conversation.id,
-            "Recovery attempt already failed. Stopping to avoid repeated execution.",
+            "The same recovery strategy has already been attempted. Stopping to avoid an execution loop.",
           );
         }
 
         sessionState.addRecovery(recoveryKey);
 
+        if (recovery.action === "stop") {
+          return failExecution(execution.id, conversation.id, recovery.reason);
+        }
+
+        recoveryAttempted = true;
+
         executionHistory = appendObservation(
           executionHistory,
           result.observation,
         );
+
+        executionHistory += `
+Recovery Decision:
+Action: ${recovery.action}
+Reason: ${recovery.reason}
+Confidence: ${recovery.confidence}
+
+Recovery Instruction:
+Do not repeat the failed operation unchanged.
+Generate the next plan according to the recovery action.
+`;
 
         continue;
       }

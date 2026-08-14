@@ -1,10 +1,13 @@
 import type { Observation } from "../observation/observation.js";
 import type { Plan } from "../planner/planner.js";
+import { GoalVerifier } from "./goal-verifier.js";
 import { VerificationRules } from "./verification.rules.js";
 import type { VerificationResult } from "./verification.types.js";
 import type { Verifier } from "./verifier.js";
 
 export class VerificationService implements Verifier {
+  private goalVerifier = new GoalVerifier();
+
   verify(plan: Plan, observation: Observation): VerificationResult {
     if (VerificationRules.hasFailed(observation)) {
       return {
@@ -24,5 +27,9 @@ export class VerificationService implements Verifier {
       status: "continue",
       reason: "Planner should generate the next execution step.",
     };
+  }
+
+  verifyGoal(goal: string, observation: Observation): VerificationResult {
+    return this.goalVerifier.verify(goal, observation);
   }
 }
