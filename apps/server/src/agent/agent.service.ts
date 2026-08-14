@@ -25,6 +25,12 @@ import { getSession } from "./session.js";
 import { MemoryService } from "../memory/memory.service.js";
 import { confirmationService } from "../executor/confirmation.instance.js";
 import { executor } from "../executor/executor.instance.js";
+import { ExecutionRepository } from "../repositories/execution.repository.js";
+import { MessageRepository } from "../repositories/message.repository.js";
+import { ExecutionStatus, Role } from "@prisma/client";
+
+const executionRepository = new ExecutionRepository();
+const messageRepository = new MessageRepository();
 
 export class AgentService {
   // Public API - Sirf delegate karega
@@ -111,7 +117,7 @@ export class AgentService {
     success: boolean;
     response: string;
   }> {
-    const confirmation = confirmationService.get(confirmationId);
+    const confirmation = confirmationService.confirm(confirmationId);
 
     if (!confirmation) {
       return {
@@ -120,37 +126,61 @@ export class AgentService {
       };
     }
 
-    const result = await executor.execute(
-      confirmation.executionId,
-      confirmation.plan,
-      emitter,
-    );
-    if(result.success){
-      confirmationService.remove(confirmationId)
-    }
+    try {
+      const result = await executor.execute(
+        confirmation.executionId,
+        confirmation.plan,
+        emitter,
+      );
 
-    return {
-      success: result.success,
-      response: result.output,
-    };
+      await executionRepository.updateStatus(
+        confirmation.executionId,
+        result.success ? ExecutionStatus.SUCCESS : ExecutionStatus.FAILED,
+      );
+
+      await messageRepository.create(
+        confirmation.conversationId,
+        Role.ASSISTANT,
+        result.output,
+      );
+
+      return {
+        success: result.success,
+        response: result.output,
+      };
+    } catch (error) {
+      await executionRepository.updateStatus(
+        confirmation.executionId,
+        ExecutionStatus.FAILED,
+      );
+
+      const message =
+        error instanceof Error ? error.message : "Execution failed.";
+
+      return {
+        success: false,
+        response: message,
+      };
+    }
   }
 
   cancelConfirmation(confirmationId: string): {
-    success: boolean;
-    response: string;
-  } {
-    const cancelled = confirmationService.cancel(confirmationId);
+  success: boolean;
+  response: string;
+} {
+  const cancelled = confirmationService.cancel(confirmationId);
 
-    if (!cancelled) {
-      return {
-        success: false,
-        response: "Confirmation not found or it has already been handled.",
-      };
-    }
-
+  if (!cancelled) {
     return {
-      success: true,
-      response: "Confirmation cancelled. No action was executed.",
+      success: false,
+      response:
+        "Confirmation not found or it has already been handled.",
     };
   }
+
+  return {
+    success: true,
+    response: "Confirmation cancelled. No action was executed.",
+  };
+}
 }

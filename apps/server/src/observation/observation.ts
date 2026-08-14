@@ -21,6 +21,12 @@ export type Observation = {
   severity: ObservationSeverity;
   recoverable: boolean;
   suggestion?: string;
+
+  recovery?:{
+    attempted:boolean;
+    successful:boolean;
+    message:string;
+  }
   metadata?: ToolMetadata;
 };
 

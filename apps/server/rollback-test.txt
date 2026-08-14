@@ -1,3 +1,0 @@
-Hello NodeBase
-
-This is original content.

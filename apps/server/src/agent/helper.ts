@@ -9,7 +9,10 @@ export function emit(
   emitter?.emit("event", event);
 }
 
-export function appendObservation(history: string, observation: Observation): string {
+export function appendObservation(
+  history: string,
+  observation: Observation,
+): string {
   return (
     history +
     `
@@ -28,6 +31,17 @@ ${observation.facts.join("\n")}
 Errors:
 ${observation.errors.join("\n")}
 
+Recovery:
+${
+  observation.recovery
+    ? `
+Attempted: ${observation.recovery.attempted}
+Successful: ${observation.recovery.successful}
+Message: ${observation.recovery.message}
+`
+    : "No recovery was attempted."
+}
+
 -----------------------------------
 `
   );
@@ -39,7 +53,14 @@ export function shouldRetry(
   retryCount: number,
   maxIterations: number,
 ): boolean {
+  // Maximum retry limit
   if (retryCount >= maxIterations - 1) {
+    return false;
+  }
+
+  // If rollback was attempted but failed,
+  // never automatically retry.
+  if (observation.recovery?.attempted && !observation.recovery.successful) {
     return false;
   }
 
@@ -48,7 +69,7 @@ export function shouldRetry(
       return false;
 
     case "continue":
-      return true;
+      return observation.recoverable;
 
     case "failed":
       return observation.recoverable;

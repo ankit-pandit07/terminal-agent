@@ -5,17 +5,11 @@ export class SessionState {
   private lastError: string | undefined = undefined;
 
   private retryCount = 0;
-
   private executedCommands: string[] = [];
-
   private modifiedFiles: string[] = [];
-
   private successfulCommnads:string[]=[];
-
   private failedCommands:string[]=[];
-
   private visitedDirectories:string[]=[];
-
   private recoveryHistory:string[]=[];
 
 

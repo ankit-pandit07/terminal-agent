@@ -67,6 +67,11 @@ export class ExecutorService implements Executor {
     tool: string,
     message: string,
     metadata?: ToolMetadata,
+    recovery?: {
+      attempted: boolean;
+      successful: boolean;
+      message: string;
+    },
   ): ExecutionResult {
     return {
       success: false,
@@ -76,6 +81,7 @@ export class ExecutorService implements Executor {
         false,
         message,
         metadata,
+        recovery,
       ),
     };
   }
@@ -103,7 +109,7 @@ export class ExecutorService implements Executor {
         const tool = this.registry.get(step.tool);
 
         if (step.tool === "file" && step.input.action === "edit") {
-          const path = this.fileTool.resolvePath(String(step.input.path))
+          const path = this.fileTool.resolvePath(String(step.input.path));
           const instruction = String(step.input.instruction);
           let backup: any = null;
 
@@ -166,8 +172,14 @@ export class ExecutorService implements Executor {
 
             if (!build.success) {
               // Build failed - rollback
-              await this.rollbackService.restore(backup);
+              const rollback = await this.rollbackService.restore(backup);
               await this.backupService.delete(backup);
+
+              this.session.addRecovery(
+                rollback.success
+                  ? `Rollback successful for ${path}. Original file restored.`
+                  : `Rollback failed for ${path} : ${rollback.message}`,
+              );
 
               // Save rollback to memory
               await this.memoryService.saveRollback(executionId, path);
@@ -179,10 +191,20 @@ export class ExecutorService implements Executor {
                 `FAILED: Build failed after file edit`,
               );
 
-              this.session.addRecovery(
-                "Rollback executed after build failure.",
+              const rollbackMessage = rollback.success
+                ? "Rollback successful. Original file restored."
+                : `Rollback failed: ${rollback.message}`;
+
+              return this.failure(
+                "build",
+                `Build failed.\n${build.stderr}\n${rollbackMessage}`,
+                undefined,
+                {
+                  attempted: true,
+                  successful: rollback.success,
+                  message: rollbackMessage,
+                },
               );
-              return this.failure("build", `Build failed.\n${build.stderr}`);
             }
 
             // Build succeeded - cleanup
@@ -230,14 +252,47 @@ export class ExecutorService implements Executor {
             );
 
             // Restore on failure
+            let recovery:
+              | {
+                  attempted: boolean;
+                  successful: boolean;
+                  message: string;
+                }
+              | undefined;
+
             if (backup) {
               try {
-                await this.rollbackService.restore(backup);
+                const rollback = await this.rollbackService.restore(backup);
+
                 await this.backupService.delete(backup);
 
-                // Save rollback to memory
+                const recoveryMessage = rollback.success
+                  ? `Rollback successful for ${path}. Original file restored.`
+                  : `Rollback failed for ${path}: ${rollback.message}`;
+
+                recovery = {
+                  attempted: true,
+                  successful: rollback.success,
+                  message: recoveryMessage,
+                };
+
+                this.session.addRecovery(recoveryMessage);
+
                 await this.memoryService.saveRollback(executionId, path);
               } catch (restoreError) {
+                const recoveryMessage =
+                  restoreError instanceof Error
+                    ? `Rollback failed for ${path}: ${restoreError.message}`
+                    : `Rollback failed for ${path}.`;
+
+                recovery = {
+                  attempted: true,
+                  successful: false,
+                  message: recoveryMessage,
+                };
+
+                this.session.addRecovery(recoveryMessage);
+
                 console.error(`Failed to restore file ${path}:`, restoreError);
               }
             }
@@ -249,7 +304,8 @@ export class ExecutorService implements Executor {
               message,
               false,
             );
-            return this.failure(step.tool, message);
+
+            return this.failure(step.tool, message, undefined, recovery);
           }
         }
 

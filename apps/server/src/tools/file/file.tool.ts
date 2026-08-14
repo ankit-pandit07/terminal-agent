@@ -5,12 +5,14 @@ import type {
   ToolOutput,
 } from "../base/tool.interface.js";
 
-import { promises as fs } from "fs";
+
+import { promises as fs } from "node:fs";
 import path from "node:path";
 import { SessionState } from "../../session/session.state.js";
 import { PatchService } from "../../editor/patch/patch.service.js";
 import { BackupService } from "../../editor/rollback/backup.service.js";
 import { RollbackService } from "../../editor/rollback/rollback.service.js";
+type FileSystem = typeof fs;
 
 export class FileTool implements Tool {
   name = "file";
@@ -35,7 +37,9 @@ export class FileTool implements Tool {
 
   description = "Create, read, write, delete and edit files.";
 
-  constructor(private session: SessionState) {}
+  constructor(private session: SessionState,
+    private fileSystem: FileSystem = fs,
+  ) {}
 
   public resolvePath(filePath: string): string {
     return path.resolve(this.session.getCurrentDirectory(), filePath);
@@ -44,20 +48,20 @@ export class FileTool implements Tool {
   public async readFile(filePath: string): Promise<string> {
     const resolvedPath = this.resolvePath(filePath);
 
-    return await fs.readFile(resolvedPath, "utf-8");
+    return await this.fileSystem.readFile(resolvedPath, "utf-8");
   }
 
   public async writeFile(filePath: string, content: string): Promise<void> {
     const resolvedPath = this.resolvePath(filePath);
 
-    await fs.writeFile(resolvedPath, content, "utf-8");
+    await this.fileSystem.writeFile(resolvedPath, content, "utf-8");
   }
 
   private async createFile(filePath: string): Promise<ToolOutput> {
     try {
       const resolvedPath = this.resolvePath(filePath);
 
-      await fs.writeFile(resolvedPath, "", "utf-8");
+      await this.fileSystem.writeFile(resolvedPath, "", "utf-8");
 
       this.session.setLastTool("file");
       this.session.clearLastError();
@@ -137,7 +141,7 @@ export class FileTool implements Tool {
     try {
       const resolvedPath = this.resolvePath(filePath);
 
-      await fs.unlink(resolvedPath);
+      await this.fileSystem.unlink(resolvedPath);
 
       this.session.setLastTool("file");
       this.session.clearLastError();
@@ -171,7 +175,7 @@ export class FileTool implements Tool {
       const resolvedPath = this.resolvePath(filePath);
 
       // 1. Read current content
-      const oldContent = await fs.readFile(resolvedPath, "utf-8");
+      const oldContent = await this.fileSystem.readFile(resolvedPath, "utf-8");
 
       // 2. Check old text
       if (!oldContent.includes(oldText)) {
@@ -200,19 +204,25 @@ export class FileTool implements Tool {
       const patchResult = patchService.apply(oldContent, newContent);
 
       if (!patchResult.success) {
-        await this.rollbackService.restore(backup);
+        const rollback=await this.rollbackService.restore(backup);
+
+        if(rollback.success){
+          this.session.addRecovery(`Patch validation failed for ${resolvedPath}. Original file restored.`)
+        }else{
+          this.session.addRecovery(`Patch validation failed for ${resolvedPath}, and rollback failed:${rollback.message}`)
+        }
 
         return {
           success: false,
-          data: "Patch validation failed. Original file restored.",
+          data: rollback.success ? "Patch validation failed. Original file restored." : `Patch validation failed and rollback failed: ${rollback.message}`,
         };
       }
 
       // 6. Write patched content
-      await fs.writeFile(resolvedPath, patchResult.content, "utf-8");
+      await this.fileSystem.writeFile(resolvedPath, patchResult.content, "utf-8");
 
       // 7. Verify actual file content
-      const verifiedContent = await fs.readFile(resolvedPath, "utf-8");
+      const verifiedContent = await this.fileSystem.readFile(resolvedPath, "utf-8");
 
       if (verifiedContent !== patchResult.content) {
         const rollback = await this.rollbackService.restore(backup);
@@ -248,6 +258,7 @@ export class FileTool implements Tool {
         if (!rollback.success) {
           this.session.setLastError(`${message}. ${rollback.message}`);
 
+          this.session.addRecovery(`Rollback failed for ${this.resolvePath}:${rollback.message}`)
           return {
             success: false,
             data: `${message}. Rollback also failed: ${rollback.message}`,
@@ -255,7 +266,7 @@ export class FileTool implements Tool {
         }
 
         this.session.setLastError(`${message}. Original file restored.`);
-
+        this.session.addRecovery(`Rollback successful for ${this.resolvePath}. Original file restored.`)
         return {
           success: false,
           data: `${message}. Original file restored.`,
@@ -303,7 +314,7 @@ export class FileTool implements Tool {
       case "remove": {
         const filePath = this.resolvePath(String(input.path));
 
-        await fs.unlink(filePath);
+        await this.fileSystem.unlink(filePath);
 
         this.session.setLastTool("file");
         this.session.clearLastError();
