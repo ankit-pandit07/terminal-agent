@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function ExecutionDetail({ execution }: Props) {
-  const completed = execution.status === "COMPLETED";
+  const completed = execution.status === "SUCCESS";
 
   const failed = execution.status === "FAILED";
 

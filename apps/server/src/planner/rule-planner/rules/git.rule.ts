@@ -26,7 +26,7 @@ export class GitRule implements PlanningRule {
       confidence: 1,
 
       plan: {
-         source: "rule",
+        source: "rule",
         steps: [
           {
             tool: "terminal",

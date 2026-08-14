@@ -1,6 +1,5 @@
 import { executor } from "../executor/executor.instance.js";
 
-
 export async function getSession() {
   return executor.getSession().getSnapshot();
 }

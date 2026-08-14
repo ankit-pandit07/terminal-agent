@@ -45,7 +45,7 @@ export async function processAgentRequest(
   emitter?: AgentEventEmitter,
 ): Promise<AgentResponse> {
   let execution: { id: string } | null = null;
-
+  const sessionState = executor.getSession();
   try {
     // Create Conversation
     let conversation;
@@ -223,10 +223,29 @@ ${executionHistory}
       });
 
       if (retry) {
+        const recoveryKey = `${result.observation.tool}:${result.observation.summary}`;
+        const recoveryHistory = sessionState.getRecoveryHistory();
+
+        if (recoveryHistory.includes(recoveryKey)) {
+          executionHistory = appendObservation(
+            executionHistory,
+            result.observation,
+          );
+
+          return failExecution(
+            execution.id,
+            conversation.id,
+            "Recovery attempt already failed. Stopping to avoid repeated execution.",
+          );
+        }
+
+        sessionState.addRecovery(recoveryKey);
+
         executionHistory = appendObservation(
           executionHistory,
           result.observation,
         );
+
         continue;
       }
 

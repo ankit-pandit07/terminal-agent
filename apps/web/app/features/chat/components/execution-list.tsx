@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-
 import type { Execution } from "../api/execution.api";
 
 interface Props {
@@ -23,7 +22,7 @@ export function ExecutionList({ executions }: Props) {
   return (
     <div className="space-y-3">
       {executions.map((execution) => {
-        const completed = execution.status === "COMPLETED";
+        const completed = execution.status === "SUCCESS";
 
         const failed = execution.status === "FAILED";
 

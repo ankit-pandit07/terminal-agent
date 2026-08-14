@@ -1,18 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+
 import { useExecution } from "../../../features/chat/hooks/use.execution";
 import { ExecutionDetail } from "../../../features/chat/components/execution.detail";
-interface Props {
-  params: Promise<{
-    id: string;
-  }>;
-}
 
-export default async function ExecutionDetailPage({ params }: Props) {
-  const { id } = await params;
+export default function ExecutionDetailPage() {
+  const params = useParams<{ id: string }>();
 
-  return <ExecutionContent executionId={id} />;
+  const executionId = params.id;
+
+  return <ExecutionContent executionId={executionId} />;
 }
 
 function ExecutionContent({ executionId }: { executionId: string }) {
@@ -32,6 +30,7 @@ function ExecutionContent({ executionId }: { executionId: string }) {
         <p className="text-red-400">{error}</p>
 
         <button
+          type="button"
           onClick={() => void refresh()}
           className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"
         >
@@ -49,6 +48,7 @@ function ExecutionContent({ executionId }: { executionId: string }) {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-6 py-8">
         <button
+          type="button"
           onClick={() => router.back()}
           className="mb-6 text-sm text-zinc-400 hover:text-white"
         >
