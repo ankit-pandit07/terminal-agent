@@ -55,54 +55,56 @@ export function usePlanner() {
   }
 
   async function confirmPlan() {
-    if (!result?.confirmationId || !result.requiresConfirmation) {
-      return;
-    }
-
-    setExecuting(true);
-    setError(null);
-
-    try {
-      const response = await confirmAction(result.confirmationId);
-
-      setResult({
-        success: Boolean(response.success),
-        output: String(response.response ?? "Action completed."),
-        observation: response.observation ?? null,
-      });
-    } catch (error) {
-      console.error("Failed to confirm plan:", error);
-
-      setError("Failed to confirm the action.");
-    } finally {
-      setExecuting(false);
-    }
+  if (!result?.confirmationId || !result.requiresConfirmation) {
+    return;
   }
+
+  setExecuting(true);
+  setError(null);
+
+  try {
+    const response = await confirmAction(result.confirmationId);
+
+    setResult({
+      success: response.success,
+      output: response.response,
+      observation: response.observation ?? null,
+      requiresConfirmation: false,
+      confirmationId: undefined,
+    });
+  } catch (error) {
+    console.error("Failed to confirm plan:", error);
+    setError("Failed to confirm the action.");
+  } finally {
+    setExecuting(false);
+  }
+}
 
   async function cancelPlan() {
-    if (!result?.confirmationId || !result.requiresConfirmation) {
-      return;
-    }
-
-    setExecuting(true);
-    setError(null);
-
-    try {
-      const response = await cancelAction(result.confirmationId);
-
-      setResult({
-        success: false,
-        output: String(response.response ?? "Action cancelled."),
-        observation: response.observation ?? null,
-      });
-    } catch (error) {
-      console.error("Failed to cancel plan:", error);
-
-      setError("Failed to cancel the action.");
-    } finally {
-      setExecuting(false);
-    }
+  if (!result?.confirmationId || !result.requiresConfirmation) {
+    return;
   }
+
+  setExecuting(true);
+  setError(null);
+
+  try {
+    const response = await cancelAction(result.confirmationId);
+
+    setResult({
+      success: false,
+      output: response.response,
+      observation: response.observation ?? null,
+      requiresConfirmation: false,
+      confirmationId: undefined,
+    });
+  } catch (error) {
+    console.error("Failed to cancel plan:", error);
+    setError("Failed to cancel the action.");
+  } finally {
+    setExecuting(false);
+  }
+}
 
   function clear() {
     setPlan(null);
@@ -119,10 +121,8 @@ export function usePlanner() {
 
     generatePlan,
     runPlan,
-
     confirmPlan,
     cancelPlan,
-
     clear,
   };
 }

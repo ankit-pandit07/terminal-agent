@@ -43,3 +43,21 @@ export async function executePlan(
 
   return data.result;
 }
+
+export async function confirmationExecution(confirmationId:string){
+  const {data}= await api.post<{
+    success:boolean;
+    response:string;
+  }>(`/chat/confirm/${confirmationId}`);
+
+  return data;
+}
+
+export async function cancelConfirmation(confirmationId:string){
+  const {data}=await api.post<{
+    success:boolean;
+    response:string;
+  }>(`/chat/cancel/${confirmationId}`);
+  
+  return data;
+}

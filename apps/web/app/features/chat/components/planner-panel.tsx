@@ -147,16 +147,23 @@ export function PlannerPanel() {
 
             <span
               className={
-                result.success
-                  ? "rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-400"
-                  : "rounded-full bg-red-500/10 px-3 py-1 text-xs text-red-400"
+                result.requiresConfirmation
+                  ? "rounded-full bg-yellow-500/10 px-3 py-1 text-xs text-yellow-400"
+                  : result.success
+                    ? "rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-400"
+                    : "rounded-full bg-red-500/10 px-3 py-1 text-xs text-red-400"
               }
             >
-              {result.success ? "Success" : "Failed"}
+              {result.requiresConfirmation
+                ? "Confirmation Required"
+                : result.success
+                  ? "Success"
+                  : "Failed"}
             </span>
           </div>
+
           {/* Confirmation */}
-          {result.requiresConfirmation && result.confirmationId && (
+          {result.requiresConfirmation && result.confirmationId ? (
             <div className="mt-4 rounded-xl border border-yellow-700/50 bg-yellow-950/20 p-5">
               <div className="flex items-center gap-2">
                 <span className="text-xl">⚠️</span>
@@ -190,10 +197,12 @@ export function PlannerPanel() {
                 </button>
               </div>
             </div>
+          ) : (
+            /* Normal execution result */
+            <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-4 text-sm text-zinc-300">
+              {result.output || "No output"}
+            </pre>
           )}
-          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-4 text-sm text-zinc-300">
-            {result.output || "No output"}
-          </pre>
         </div>
       )}
     </div>
