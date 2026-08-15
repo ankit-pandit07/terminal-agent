@@ -17,10 +17,7 @@ export class GoalVerifier {
 
     // Installation goals
     if (goalText.includes("install")) {
-  if (
-    output.includes("installed") ||
-    output.includes("added")
-  ) {
+      if (output.includes("installed") || output.includes("added")) {
         return {
           status: "completed",
           reason: "The requested installation appears to be complete.",
