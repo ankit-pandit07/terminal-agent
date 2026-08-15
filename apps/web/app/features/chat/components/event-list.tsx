@@ -20,9 +20,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-400">
-                    ⚙
-                  </span>
+                  <span className="text-blue-400">⚙</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Planning
@@ -30,10 +28,7 @@ export function EventList() {
                 </div>
 
                 <p className="mt-1 text-sm text-zinc-400">
-                  {String(
-                    event.message ??
-                      "Planning..."
-                  )}
+                  {String(event.message ?? "Planning...")}
                 </p>
               </div>
             );
@@ -45,9 +40,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-green-400">
-                    ✓
-                  </span>
+                  <span className="text-green-400">✓</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Plan Created
@@ -55,11 +48,59 @@ export function EventList() {
                 </div>
 
                 <p className="mt-1 text-sm text-zinc-400">
-                  {String(event.steps ?? 0)}{" "}
-                  steps planned
+                  {String(event.steps ?? 0)} steps planned
                 </p>
               </div>
             );
+
+          case "decision": {
+            const decision =
+              typeof event.decision === "object" && event.decision !== null
+                ? (event.decision as Record<string, unknown>)
+                : {};
+
+            return (
+              <div
+                key={index}
+                className="rounded-lg border border-indigo-700/50 bg-indigo-950/20 px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-indigo-400">🧠</span>
+
+                  <span className="text-sm font-medium text-indigo-300">
+                    Agent Decision
+                  </span>
+                </div>
+
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Decision: </span>
+
+                    <span className="font-medium capitalize text-zinc-200">
+                      {String(decision.decision ?? "Unknown")}
+                    </span>
+                  </p>
+
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Reason: </span>
+
+                    {String(decision.reason ?? "No reason provided.")}
+                  </p>
+
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Confidence: </span>
+                    {Math.round(Number(decision.confidence ?? 0) * 100)}%
+                  </p>
+
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">LLM: </span>
+
+                    {decision.useLLM === true ? "Required" : "Not required"}
+                  </p>
+                </div>
+              </div>
+            );
+          }
 
           case "tool-start":
             return (
@@ -68,9 +109,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-yellow-400">
-                    🔧
-                  </span>
+                  <span className="text-yellow-400">🔧</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Tool Running
@@ -78,9 +117,7 @@ export function EventList() {
                 </div>
 
                 <p className="mt-1 text-sm text-zinc-400">
-                  {String(
-                    event.tool ?? "Unknown tool"
-                  )}
+                  {String(event.tool ?? "Unknown tool")}
                 </p>
               </div>
             );
@@ -94,14 +131,10 @@ export function EventList() {
                 <div className="flex items-center gap-2">
                   <span
                     className={
-                      event.success === true
-                        ? "text-green-400"
-                        : "text-red-400"
+                      event.success === true ? "text-green-400" : "text-red-400"
                     }
                   >
-                    {event.success === true
-                      ? "✓"
-                      : "✕"}
+                    {event.success === true ? "✓" : "✕"}
                   </span>
 
                   <span className="text-sm font-medium text-zinc-200">
@@ -110,9 +143,7 @@ export function EventList() {
                 </div>
 
                 <p className="mt-1 text-sm text-zinc-400">
-                  {String(
-                    event.tool ?? "Unknown tool"
-                  )}
+                  {String(event.tool ?? "Unknown tool")}
                 </p>
               </div>
             );
@@ -124,9 +155,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-purple-400">
-                    🎯
-                  </span>
+                  <span className="text-purple-400">🎯</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Goal Evaluation
@@ -146,9 +175,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-cyan-400">
-                    💭
-                  </span>
+                  <span className="text-cyan-400">💭</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Reflection
@@ -168,9 +195,7 @@ export function EventList() {
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-orange-400">
-                    🔍
-                  </span>
+                  <span className="text-orange-400">🔍</span>
 
                   <span className="text-sm font-medium text-zinc-200">
                     Verification
@@ -183,24 +208,89 @@ export function EventList() {
               </div>
             );
 
-          case "completed":
+          case "recovery":
             return (
               <div
                 key={index}
-                className="rounded-lg border border-green-900/50 bg-green-950/20 px-4 py-3"
+                className="rounded-lg border border-yellow-700/50 bg-yellow-950/20 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-green-400">
-                    ✓
-                  </span>
+                  <span className="text-yellow-400">↻</span>
 
-                  <span className="text-sm font-medium text-green-300">
-                    Task Completed
+                  <span className="text-sm font-medium text-yellow-300">
+                    Recovery
                   </span>
+                </div>
+
+                <div className="mt-2 space-y-1 text-sm">
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Action: </span>
+
+                    <span className="font-medium capitalize text-zinc-200">
+                      {String(event.action ?? "Unknown")}
+                    </span>
+                  </p>
+
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Reason: </span>
+
+                    {String(event.reason ?? "Recovery action required.")}
+                  </p>
+
+                  <p className="text-zinc-400">
+                    <span className="text-zinc-500">Confidence: </span>
+                    {Math.round(Number(event.confidence ?? 0) * 100)}%
+                  </p>
                 </div>
               </div>
             );
 
+          case "confirmation-required":
+            return (
+              <div
+                key={index}
+                className="rounded-lg border border-yellow-700/50 bg-yellow-950/20 px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400">⚠️</span>
+
+                  <span className="text-sm font-medium text-yellow-300">
+                    Confirmation Required
+                  </span>
+                </div>
+
+                <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">
+                  {String(
+                    event.message ?? "This action requires your confirmation.",
+                  )}
+                </p>
+              </div>
+            );
+
+          case "completed":
+  return (
+    <div
+      key={index}
+      className="rounded-lg border border-green-900/50 bg-green-950/20 px-4 py-3"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-green-400">
+          ✓
+        </span>
+
+        <span className="text-sm font-medium text-green-300">
+          Task Completed
+        </span>
+      </div>
+
+      <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">
+        {String(
+          event.response ??
+            "Task completed successfully."
+        )}
+      </p>
+    </div>
+  );
           case "error":
             return (
               <div
@@ -208,9 +298,7 @@ export function EventList() {
                 className="rounded-lg border border-red-900/50 bg-red-950/20 px-4 py-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-red-400">
-                    ⚠
-                  </span>
+                  <span className="text-red-400">⚠</span>
 
                   <span className="text-sm font-medium text-red-300">
                     Error
@@ -218,10 +306,7 @@ export function EventList() {
                 </div>
 
                 <p className="mt-1 text-sm text-red-400">
-                  {String(
-                    event.message ??
-                      "Something went wrong."
-                  )}
+                  {String(event.message ?? "Something went wrong.")}
                 </p>
               </div>
             );
@@ -232,9 +317,7 @@ export function EventList() {
                 key={index}
                 className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-3"
               >
-                <p className="text-sm text-zinc-400">
-                  {event.type}
-                </p>
+                <p className="text-sm text-zinc-400">{event.type}</p>
               </div>
             );
         }

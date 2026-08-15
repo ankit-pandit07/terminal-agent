@@ -1,7 +1,7 @@
 "use client";
 
 import { useChatStore } from "../store/chat.store";
-import { EventList } from "./event-list.";
+import { EventList } from "./event-list";
 import { MessageList } from "./message-list";
 import { useEffect, useRef, useState } from "react";
 import { confirmAction, cancelAction } from "../api/chat.api";
@@ -11,15 +11,10 @@ export function ChatWindow() {
   const events = useChatStore((s) => s.events);
 
   const confirmationId = useChatStore((s) => s.confirmationId);
-
   const confirmationMessage = useChatStore((s) => s.confirmationMessage);
-
   const clearConfirmation = useChatStore((s) => s.clearConfirmation);
-
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
-
   const [processing, setProcessing] = useState(false);
-
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,11 +30,8 @@ export function ChatWindow() {
 
     try {
       setProcessing(true);
-
       const result = await confirmAction(confirmationId);
-
       clearConfirmation();
-
       addAssistantMessage(
         String(result.response ?? "Action completed successfully."),
       );
@@ -59,9 +51,7 @@ export function ChatWindow() {
 
     try {
       setProcessing(true);
-
       const result = await cancelAction(confirmationId);
-
       clearConfirmation();
 
       addAssistantMessage(String(result.response ?? "Action cancelled."));
