@@ -62,7 +62,7 @@ export function Header({
           type="button"
           onClick={onToggleInspector}
           className={`
-            hidden items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition sm:flex
+            flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition sm:px-3
             ${
               inspectorOpen
                 ? "border-blue-600/50 bg-blue-600/10 text-blue-400"
@@ -72,7 +72,7 @@ export function Header({
           title="Toggle Event Inspector"
         >
           <span>🔍</span>
-          <span>Inspector</span>
+          <span className="hidden sm:inline">Inspector</span>
         </button>
 
         {/* Settings Button */}

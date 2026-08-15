@@ -3,7 +3,7 @@
 import { useWorkspace } from "../hooks/use-workspace";
 
 export function WorkspacePanel() {
-  const { workspace, loading, error } = useWorkspace();
+  const { workspace, loading, error, refresh } = useWorkspace();
 
   if (loading) {
     return (
@@ -17,6 +17,14 @@ export function WorkspacePanel() {
     return (
       <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6">
         <p className="text-sm text-red-400">{error}</p>
+
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500"
+        >
+          Retry
+        </button>
       </div>
     );
   }

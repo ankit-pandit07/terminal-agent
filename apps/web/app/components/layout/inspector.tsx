@@ -15,24 +15,31 @@ export function Inspector({ isOpen = true, onToggle }: InspectorProps) {
   }
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 transition-all duration-200">
-      {/* Header with collapse button */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">🔍</span>
-          <h2 className="font-semibold text-white">Event Inspector</h2>
+    <>
+      {/* Mobile Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
+        onClick={onToggle}
+      />
+
+      <aside className="fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85vw] shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl transition-all duration-200 md:static md:z-auto md:w-80 md:shadow-none">
+        {/* Header with collapse button */}
+        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🔍</span>
+            <h2 className="font-semibold text-white">Event Inspector</h2>
+          </div>
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              title="Close Inspector"
+            >
+              ✕
+            </button>
+          )}
         </div>
-        {onToggle && (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-            title="Close Inspector"
-          >
-            ✕
-          </button>
-        )}
-      </div>
 
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 bg-zinc-900/30">
         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -74,6 +81,7 @@ export function Inspector({ isOpen = true, onToggle }: InspectorProps) {
         )}
       </div>
     </aside>
+    </>
   );
 }
 

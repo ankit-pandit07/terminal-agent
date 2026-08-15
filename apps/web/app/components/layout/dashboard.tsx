@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "./header";
 import { Inspector } from "./inspector";
 import { Sidebar } from "./sidebar";
@@ -12,7 +12,13 @@ interface Props {
 
 export function Dashboard({ children }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setInspectorOpen(true);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950 text-white">
