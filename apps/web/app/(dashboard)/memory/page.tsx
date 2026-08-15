@@ -1,9 +1,18 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { MemoryPanel } from "../../features/chat/components/memory-panel";
 
 export default function MemoryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-sm text-zinc-500">Loading memory...</div>}>
+      <MemoryContent />
+    </Suspense>
+  );
+}
+
+function MemoryContent() {
   const searchParams = useSearchParams();
 
   const conversationId = searchParams.get("conversation");
@@ -26,3 +35,4 @@ export default function MemoryPage() {
     </div>
   );
 }
+

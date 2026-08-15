@@ -27,27 +27,20 @@ export async function getTools(){
     return data.tools;
 }
 
-export async function getTool(name:string){
-    const {data}=await api.get<{
-        success:boolean;
-        tool:Tool;
-    }>(`/tool${name}`);
-    return data.tool;
+export async function getTool(name: string) {
+  const { data } = await api.get<{
+    success: boolean;
+    tool: Tool;
+  }>(`/tools/${name}`);
+  return data.tool;
 }
 
-export async function enableTool(
-    name:string
-){
-    const {data}=await api.patch(`tools/${name}/enable`)
-    return data;
-}
-
-export async function disableTool(
-  name: string,
-) {
-  const { data } = await api.patch(
-    `/tools/${name}/disable`,
-  );
-
+export async function enableTool(name: string) {
+  const { data } = await api.patch(`/tools/${name}/enable`);
   return data;
 }
+
+export async function disableTool(name: string) {
+  const { data } = await api.patch(`/tools/${name}/disable`);
+  return data;
+}

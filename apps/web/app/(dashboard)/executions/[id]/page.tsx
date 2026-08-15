@@ -2,8 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 
-import { useExecution } from "../../../features/chat/hooks/use.execution";
-import { ExecutionDetail } from "../../../features/chat/components/execution.detail";
+import { useExecution } from "../../../features/chat/hooks/use-execution";
+import { ExecutionDetail } from "../../../features/chat/components/execution-detail";
+
 
 export default function ExecutionDetailPage() {
   const params = useParams<{ id: string }>();

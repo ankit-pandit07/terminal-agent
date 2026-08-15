@@ -1,11 +1,20 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useExecutions } from "../../features/chat/hooks/use-executions";
 import { ExecutionList } from "../../features/chat/components/execution-list";
 
 export default function ExecutionPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-sm text-zinc-500">Loading executions...</div>}>
+      <ExecutionContent />
+    </Suspense>
+  );
+}
+
+function ExecutionContent() {
   const searchParams = useSearchParams();
 
   const conversationId = searchParams.get("conversation");
@@ -82,3 +91,4 @@ export default function ExecutionPage() {
     </div>
   );
 }
+
