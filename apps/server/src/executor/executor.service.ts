@@ -20,6 +20,8 @@ import { BackupService } from "../editor/rollback/backup.service.js";
 import { RollbackService } from "../editor/rollback/rollback.service.js";
 import { WorkspaceService } from "../workspace/workspace.service.js";
 import { MemoryService } from "../memory/memory.service.js"; // Add this import
+import { RetryPolicy } from "./retry/retry.policy.js";
+import { RecoveryStrategy } from "../recovery/recovery.strategy.js";
 
 export class ExecutorService implements Executor {
   private registry = new ToolRegistry();
@@ -42,6 +44,9 @@ export class ExecutorService implements Executor {
   private rollbackService = new RollbackService();
   private workspaceService = new WorkspaceService();
   private memoryService = new MemoryService();
+  private recoveryStrategy = new RecoveryStrategy();
+
+  private retryPolicy = new RetryPolicy();
 
   constructor() {
     this.registry.register(new EchoTool());
@@ -357,53 +362,22 @@ export class ExecutorService implements Executor {
           }
         }
 
-        const result = await tool.execute(step.input);
+        let result = await tool.execute(step.input);
 
-        if (result.success) {
-          this.onToolSuccess(step.tool);
-
-          // Save successful execution to memory
-          await this.memoryService.saveToolExecution(
-            executionId,
-            step.tool,
-            String(result.data),
-          );
-
-          // Memory engine - successful command
-          if (step.tool === "terminal" && step.input.command) {
-            this.session.addSuccessfulCommand(String(step.input.command));
-          }
-        } else {
+        while (!result.success) {
           this.onToolFailure(step.tool, String(result.data));
 
-          // Save failure to memory
+          // Save failed attempt
           await this.memoryService.saveToolExecution(
             executionId,
             step.tool,
             `FAILED: ${String(result.data)}`,
           );
 
-          // Memory engine - failed command
           if (step.tool === "terminal" && step.input.command) {
             this.session.addFailedCommand(String(step.input.command));
           }
-        }
 
-        emitter?.emit("event", {
-          type: "tool-complete",
-          tool: step.tool,
-          success: result.success,
-        });
-
-        await this.toolExecutionRepository.create(
-          executionId,
-          step.tool,
-          JSON.stringify(step.input),
-          String(result.data),
-          result.success,
-        );
-
-        if (!result.success) {
           const observation = this.observationService.create(
             step.tool,
             false,
@@ -415,12 +389,71 @@ export class ExecutorService implements Executor {
             this.session.addRecovery(observation.suggestion);
           }
 
-          return {
-            success: false,
-            output: String(result.data),
-            observation,
-          };
+          const recovery = this.recoveryStrategy.decide(observation);
+
+          if (recovery.action === "retry") {
+            this.session.addRecovery(recovery.reason);
+          }
+
+          const retryDecision = this.retryPolicy.shouldRetry({
+            attempt: this.session.getRetryCount(),
+            maxAttempts: 3,
+            tool: step.tool,
+            error: String(result.data),
+            recovery,
+          });
+
+          if (!retryDecision.shouldRetry) {
+            emitter?.emit("event", {
+              type: "verification",
+              status: "failed",
+              reason: retryDecision.reason,
+            });
+
+            return {
+              success: false,
+              output: String(result.data),
+              observation,
+            };
+          }
+
+          // Recovery / retry event
+          emitter?.emit("event", {
+            type: "recovery",
+            action: "retry",
+            reason: observation.suggestion ?? retryDecision.reason,
+            confidence: 1,
+          });
+
+          // Retry the same step
+          result = await tool.execute(step.input);
         }
+
+        this.onToolSuccess(step.tool);
+
+        await this.memoryService.saveToolExecution(
+          executionId,
+          step.tool,
+          String(result.data),
+        );
+
+        if (step.tool === "terminal" && step.input.command) {
+          this.session.addSuccessfulCommand(String(step.input.command));
+        }
+
+        emitter?.emit("event", {
+          type: "tool-complete",
+          tool: step.tool,
+          success: true,
+        });
+
+        await this.toolExecutionRepository.create(
+          executionId,
+          step.tool,
+          JSON.stringify(step.input),
+          String(result.data),
+          true,
+        );
 
         outputs.push(String(result.data));
       }
