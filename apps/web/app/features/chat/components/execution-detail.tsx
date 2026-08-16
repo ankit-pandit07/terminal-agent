@@ -1,140 +1,179 @@
 "use client";
 
-import clsx from "clsx";
+import {
+  Layers,
+  Wrench,
+} from "lucide-react";
 import type { Execution } from "../api/execution.api";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { CopyButton } from "@/components/shared/copy-button";
+import { JsonViewer } from "@/components/shared/json-viewer";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Props {
   execution: Execution;
 }
 
 export function ExecutionDetail({ execution }: Props) {
-  const completed = execution.status === "SUCCESS";
-
-  const failed = execution.status === "FAILED";
+  const started = new Date(execution.startedAt);
+  const finished = execution.finishedAt ? new Date(execution.finishedAt) : null;
+  const durationMs = finished ? finished.getTime() - started.getTime() : null;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-zinc-500">
-              Execution
-            </p>
+      {/* Execution Summary Card */}
+      <Card className="border-zinc-800 bg-zinc-900/70 shadow-lg">
+        <CardHeader className="pb-4 border-b border-zinc-800/80">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Execution Trace
+                </span>
+                <span className="font-mono text-[11px] text-zinc-600">
+                  #{execution.id.slice(0, 8)}
+                </span>
+              </div>
+              <CardTitle className="text-lg text-white font-bold leading-snug">
+                {execution.goal}
+              </CardTitle>
+            </div>
 
-            <h1 className="mt-2 text-xl font-semibold text-white">
-              {execution.goal}
-            </h1>
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <StatusBadge status={execution.status} />
+              <CopyButton text={JSON.stringify(execution, null, 2)} size="icon-sm" />
+            </div>
           </div>
+        </CardHeader>
 
-          <span
-            className={clsx(
-              "rounded-full px-3 py-1 text-xs font-medium",
-              completed && "bg-green-500/10 text-green-400",
-              failed && "bg-red-500/10 text-red-400",
-              !completed && !failed && "bg-yellow-500/10 text-yellow-400",
-            )}
-          >
-            {execution.status}
-          </span>
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="space-y-1 rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Started At
+              </p>
+              <p className="text-xs font-mono text-zinc-200">
+                {started.toLocaleTimeString()}
+              </p>
+            </div>
+
+            <div className="space-y-1 rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Finished At
+              </p>
+              <p className="text-xs font-mono text-zinc-200">
+                {finished ? finished.toLocaleTimeString() : "In Progress"}
+              </p>
+            </div>
+
+            <div className="space-y-1 rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Duration
+              </p>
+              <p className="text-xs font-mono text-zinc-200">
+                {durationMs !== null ? `${(durationMs / 1000).toFixed(2)}s` : "Running..."}
+              </p>
+            </div>
+
+            <div className="space-y-1 rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Tools Executed
+              </p>
+              <p className="text-xs font-mono font-semibold text-blue-400">
+                {execution.toolExecutions.length}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tool Executions Timeline */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-zinc-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Tool Executions & Observations
+            </h3>
+          </div>
+          <Badge variant="outline" className="text-[11px] font-mono">
+            {execution.toolExecutions.length} tool(s)
+          </Badge>
         </div>
-
-        {/* Metadata */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs text-zinc-500">Started</p>
-
-            <p className="mt-1 text-sm text-zinc-300">
-              {new Date(execution.startedAt).toLocaleString()}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs text-zinc-500">Finished</p>
-
-            <p className="mt-1 text-sm text-zinc-300">
-              {execution.finishedAt
-                ? new Date(execution.finishedAt).toLocaleString()
-                : "Still running"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tools */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Tool Executions
-        </h2>
 
         {execution.toolExecutions.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-500">
-            No tools were executed.
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-xs text-zinc-500">
+            No tools were executed during this run.
           </div>
         ) : (
           <div className="space-y-4">
-            {execution.toolExecutions.map((tool, index) => (
-              <div
-                key={tool.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-zinc-600">#{index + 1}</span>
+            {execution.toolExecutions.map((tool, index) => {
+              const isSuccess = tool.success;
 
-                    <span className="font-medium text-white">{tool.tool}</span>
+              return (
+                <div
+                  key={tool.id}
+                  className={cn(
+                    "rounded-xl border bg-zinc-900/70 p-5 shadow-md transition-colors",
+                    isSuccess
+                      ? "border-zinc-800 hover:border-zinc-700"
+                      : "border-rose-900/40 bg-rose-950/10",
+                  )}
+                >
+                  {/* Tool Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800/60">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 text-xs font-bold text-blue-400 border border-zinc-700">
+                        {index + 1}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Wrench className="h-3.5 w-3.5 text-zinc-400" />
+                        <span className="text-sm font-semibold font-mono text-white">
+                          {tool.tool}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        {new Date(tool.createdAt).toLocaleTimeString()}
+                      </span>
+                      <StatusBadge status={isSuccess ? "SUCCESS" : "FAILED"} size="sm" />
+                    </div>
                   </div>
 
-                  <span
-                    className={
-                      tool.success
-                        ? "text-sm text-green-400"
-                        : "text-sm text-red-400"
-                    }
-                  >
-                    {tool.success ? "✓ Success" : "✕ Failed"}
-                  </span>
+                  {/* Input parameters */}
+                  <div className="mt-4">
+                    <JsonViewer
+                      data={tool.input}
+                      title="Tool Input Arguments"
+                      initialExpanded={false}
+                      maxHeight="max-h-36"
+                    />
+                  </div>
+
+                  {/* Output content */}
+                  <div className="mt-3">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/90 overflow-hidden">
+                      <div className="flex items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-3 py-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Execution Output
+                        </span>
+                        <CopyButton text={tool.output || ""} size="icon-sm" />
+                      </div>
+                      <pre className="max-h-80 overflow-auto p-3.5 font-mono text-[11.5px] leading-relaxed text-zinc-200 whitespace-pre-wrap selection:bg-zinc-800">
+                        {tool.output || "No output returned."}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Input */}
-                <div className="mt-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Input
-                  </p>
-
-                  <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-3 text-xs text-zinc-300">
-                    {formatJson(tool.input)}
-                  </pre>
-                </div>
-
-                {/* Output */}
-                <div className="mt-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Output
-                  </p>
-
-                  <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-3 text-xs text-zinc-300">
-                    {tool.output || "No output"}
-                  </pre>
-                </div>
-
-                {/* Time */}
-                <p className="mt-3 text-xs text-zinc-600">
-                  {new Date(tool.createdAt).toLocaleString()}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function formatJson(value: string) {
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2);
-  } catch {
-    return value;
-  }
 }

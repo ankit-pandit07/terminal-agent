@@ -1,84 +1,116 @@
 "use client";
 
-import clsx from "clsx";
+import {
+  Wrench,
+  Terminal,
+  FileCode,
+  Globe,
+  Database,
+  Shield,
+} from "lucide-react";
 import type { Tool } from "../api/tools.api";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface ToolCardProps {
   tool: Tool;
   onToggle: (name: string, enabled: boolean) => void;
 }
 
+function getToolIcon(name: string, category?: string) {
+  const n = name.toLowerCase();
+  const c = (category || "").toLowerCase();
+  if (n.includes("terminal") || c.includes("terminal") || c.includes("command")) return Terminal;
+  if (n.includes("file") || c.includes("file") || c.includes("system")) return FileCode;
+  if (n.includes("web") || n.includes("search") || c.includes("web")) return Globe;
+  if (n.includes("db") || n.includes("prisma") || c.includes("database")) return Database;
+  if (n.includes("safety") || c.includes("security")) return Shield;
+  return Wrench;
+}
+
 export function ToolCard({ tool, onToggle }: ToolCardProps) {
   const { info } = tool;
+  const isEnabled = info.enabled ?? true;
+  const Icon = getToolIcon(tool.name, info.category);
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xs transition hover:border-zinc-700">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-white">
-              {info.displayName || tool.name}
-            </h2>
-
-            {info.category && (
-              <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 font-medium">
-                {info.category}
-              </span>
-            )}
-
-            <span
-              className={clsx(
-                "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                info.enabled
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "bg-red-500/10 text-red-400 border border-red-500/20",
+    <Card
+      className={cn(
+        "border-zinc-800 bg-zinc-900/70 shadow-md transition hover:border-zinc-700 flex flex-col justify-between",
+        !isEnabled && "opacity-60 bg-zinc-950/40",
+      )}
+    >
+      <CardHeader className="p-5 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-xl border shadow-inner",
+                isEnabled
+                  ? "border-blue-500/30 bg-blue-600/10 text-blue-400"
+                  : "border-zinc-800 bg-zinc-800/40 text-zinc-500",
               )}
             >
-              {info.enabled ? "Enabled" : "Disabled"}
-            </span>
-          </div>
+              <Icon className="h-5 w-5" />
+            </div>
 
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-            {info.description || tool.description}
-          </p>
-
-          <div className="mt-3 text-xs text-zinc-500">
-            v{info.version || "1.0.0"} · Author: {info.author || "System"}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onToggle(tool.name, info.enabled)}
-          className={clsx(
-            "shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition active:scale-95",
-            info.enabled
-              ? "border border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
-              : "bg-blue-600 text-white hover:bg-blue-500 shadow-md",
-          )}
-        >
-          {info.enabled ? "Disable Tool" : "Enable Tool"}
-        </button>
-      </div>
-
-      {info.capabilities && info.capabilities.length > 0 && (
-        <div className="mt-4 border-t border-zinc-800/80 pt-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-            Capabilities
-          </p>
-
-          <div className="flex flex-wrap gap-1.5">
-            {info.capabilities.map((capability) => (
-              <span
-                key={capability}
-                className="rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs font-mono text-zinc-300"
-              >
-                {capability}
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-bold text-white">
+                  {info.displayName || tool.name}
+                </CardTitle>
+                {info.category && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {info.category}
+                  </Badge>
+                )}
+              </div>
+              <span className="font-mono text-[11px] text-zinc-500">
+                {tool.name}
               </span>
-            ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={() => onToggle(tool.name, isEnabled)}
+              aria-label={`Toggle ${info.displayName || tool.name}`}
+            />
           </div>
         </div>
-      )}
-    </div>
+      </CardHeader>
+
+      <CardContent className="p-5 pt-2 space-y-3 flex-1">
+        <p className="text-xs text-zinc-400 leading-relaxed line-clamp-3">
+          {info.description || tool.description}
+        </p>
+
+        {info.capabilities && info.capabilities.length > 0 && (
+          <div className="pt-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5 block">
+              Capabilities
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {info.capabilities.map((cap) => (
+                <span
+                  key={cap}
+                  className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5 font-mono text-[10.5px] text-zinc-300"
+                >
+                  {cap}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="p-5 pt-3 border-t border-zinc-800/60 text-[11px] text-zinc-500 flex items-center justify-between">
+        <span>v{info.version || "1.0.0"}</span>
+        <span>Author: {info.author || "System"}</span>
+      </CardFooter>
+    </Card>
   );
 }

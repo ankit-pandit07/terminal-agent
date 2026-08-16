@@ -5,7 +5,7 @@ import { ChatWindow } from "../../features/chat/components/chat-window";
 
 export default function ChatPage() {
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden bg-zinc-950/40">
       <Suspense fallback={null}>
         <ChatPageLoader />
       </Suspense>
@@ -18,4 +18,3 @@ export default function ChatPage() {
     </div>
   );
 }
-

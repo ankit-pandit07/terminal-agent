@@ -1,7 +1,10 @@
 "use client";
 
-import clsx from "clsx";
+import { User, Bot } from "lucide-react";
 import { Message } from "../store/chat.store";
+import { CopyButton } from "@/components/shared/copy-button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface Props {
   message: Message;
@@ -12,25 +15,69 @@ export function MessageItem({ message }: Props) {
 
   return (
     <div
-      className={clsx("mb-6 flex", isUser ? "justify-end" : "justify-start")}
+      className={cn(
+        "group mb-6 flex gap-3.5 transition-opacity",
+        isUser ? "flex-row-reverse" : "flex-row",
+      )}
     >
-      <div
-        className={clsx(
-          "w-fit max-w-[80%] rounded-2xl px-5 py-4 shadow-lg transition-all",
+      {/* Avatar */}
+      <Avatar
+        className={cn(
+          "h-8 w-8 shrink-0 shadow-md",
           isUser
-            ? "bg-blue-600 text-white"
-            : "border border-zinc-800 bg-zinc-900 text-zinc-100",
+            ? "border-blue-500/40 bg-blue-600 text-white"
+            : "border-zinc-700 bg-zinc-800 text-zinc-300",
         )}
       >
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold opacity-80">
-          <span className="text-base">{isUser ? "👤" : "🤖"}</span>
+        <AvatarFallback
+          className={cn(
+            "text-xs font-bold",
+            isUser ? "bg-blue-600 text-white" : "bg-zinc-800 text-blue-400",
+          )}
+        >
+          {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        </AvatarFallback>
+      </Avatar>
 
-          <span>{isUser ? "You" : "Assistant"}</span>
+      {/* Message Bubble Container */}
+      <div
+        className={cn(
+          "flex max-w-[85%] flex-col sm:max-w-[75%]",
+          isUser ? "items-end" : "items-start",
+        )}
+      >
+        {/* Header Name & Timestamp */}
+        <div
+          className={cn(
+            "mb-1 flex items-center gap-2 px-1 text-[11px] font-medium text-zinc-500",
+            isUser && "flex-row-reverse",
+          )}
+        >
+          <span className="text-zinc-400 font-semibold">
+            {isUser ? "You" : "Terminal Agent"}
+          </span>
+          <span>·</span>
+          <span>Just now</span>
         </div>
 
-        <p className="whitespace-pre-wrap break-words text-sm leading-7">
-          {message.content}
-        </p>
+        {/* Bubble */}
+        <div
+          className={cn(
+            "relative rounded-2xl px-4 py-3.5 shadow-md transition-all leading-relaxed text-sm",
+            isUser
+              ? "rounded-tr-xs bg-blue-600 text-white selection:bg-blue-800 selection:text-white"
+              : "rounded-tl-xs border border-zinc-800 bg-zinc-900/90 text-zinc-100 selection:bg-zinc-800",
+          )}
+        >
+          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+
+          {/* Copy Button Hover */}
+          {!isUser && (
+            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <CopyButton text={message.content} size="icon-sm" />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

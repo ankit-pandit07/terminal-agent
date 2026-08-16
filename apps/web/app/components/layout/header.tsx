@@ -1,95 +1,129 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Menu,
+  SlidersHorizontal,
+  Settings,
+  Bot,
+  Circle,
+  Folder,
+} from "lucide-react";
+import { useChatStore } from "@/app/features/chat/store/chat.store";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
-  onToggleMobileSidebar?: () => void;
-  onToggleInspector?: () => void;
-  inspectorOpen?: boolean;
+  onToggleMobileSidebar: () => void;
+  onToggleInspector: () => void;
+  inspectorOpen: boolean;
 }
 
-const ROUTE_TITLES: Record<string, string> = {
-  "/chat": "Chat Assistant",
+const ROUTE_NAMES: Record<string, string> = {
+  "/chat": "Chat Console",
   "/planner": "Task Planner",
-  "/executions": "Execution History",
+  "/executions": "Execution Traces",
   "/memory": "Agent Memory",
-  "/session": "Active Session",
+  "/session": "Session State",
   "/tools": "Tool Registry",
-  "/workspace": "Workspace Info",
-  "/settings": "Settings & Config",
+  "/workspace": "Workspace Environment",
+  "/settings": "Settings",
 };
 
 export function Header({
   onToggleMobileSidebar,
   onToggleInspector,
-  inspectorOpen = true,
+  inspectorOpen,
 }: HeaderProps) {
-  const router = useRouter();
   const pathname = usePathname();
+  const loading = useChatStore((s) => s.loading);
 
-  // Match current route title or fallback to route path
-  const currentTitle =
-    Object.entries(ROUTE_TITLES).find(([key]) => pathname.startsWith(key))?.[1] ??
-    "Terminal Agent";
+  const matchedRoute = Object.keys(ROUTE_NAMES).find(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+  const currentTitle = matchedRoute ? ROUTE_NAMES[matchedRoute] : "Dashboard";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 sm:px-6">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-950/80 px-4 backdrop-blur-md">
+      {/* Left section: mobile hamburger & breadcrumb title */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu trigger */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onToggleMobileSidebar}
-          className="rounded-lg border border-zinc-800 p-2 text-zinc-400 hover:bg-zinc-900 hover:text-white md:hidden"
-          title="Open menu"
+          className="md:hidden text-zinc-400 hover:text-white"
+          aria-label="Open navigation menu"
         >
-          ☰
-        </button>
+          <Menu className="h-4 w-4" />
+        </Button>
 
-        <h1 className="text-base font-semibold tracking-tight text-white sm:text-lg">
-          {currentTitle}
-        </h1>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-zinc-400">NodeBase</span>
+          <span className="text-xs text-zinc-600">/</span>
+          <h1 className="text-xs font-bold text-white tracking-wide">
+            {currentTitle}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Status Indicator */}
-        <div className="hidden items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400 sm:flex">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Agent Ready</span>
+      {/* Right section: live status pill, inspector toggle, settings & avatar */}
+      <div className="flex items-center gap-2">
+        {/* Agent live status indicator */}
+        <div
+          className={cn(
+            "hidden sm:flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+            loading
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+          )}
+        >
+          <span
+            className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              loading ? "bg-amber-400 animate-ping" : "bg-emerald-400 animate-pulse",
+            )}
+          />
+          <span>{loading ? "Agent Active" : "Agent Ready"}</span>
         </div>
 
-        {/* Inspector Toggle */}
-        <button
-          type="button"
+        {/* Inspector Panel Toggle Button */}
+        <Button
+          variant={inspectorOpen ? "secondary" : "ghost"}
+          size="sm"
           onClick={onToggleInspector}
-          className={`
-            flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition sm:px-3
-            ${
-              inspectorOpen
-                ? "border-blue-600/50 bg-blue-600/10 text-blue-400"
-                : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white"
-            }
-          `}
-          title="Toggle Event Inspector"
+          className={cn(
+            "gap-1.5 text-xs transition-colors",
+            inspectorOpen
+              ? "bg-zinc-800 text-white"
+              : "text-zinc-400 hover:text-white",
+          )}
+          title="Toggle telemetry inspector"
         >
-          <span>🔍</span>
+          <SlidersHorizontal className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Inspector</span>
-        </button>
+        </Button>
 
-        {/* Settings Button */}
-        <button
-          type="button"
-          onClick={() => router.push("/settings")}
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+        {/* Settings shortcut link */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          asChild
+          className="text-zinc-400 hover:text-white"
         >
-          Settings
-        </button>
+          <Link href="/settings" title="Settings" aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Link>
+        </Button>
 
-        {/* Avatar */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-xs">
-          A
-        </div>
+        {/* User avatar */}
+        <Avatar className="h-7 w-7 border border-zinc-800 bg-zinc-900 text-zinc-300 shadow-xs">
+          <AvatarFallback className="bg-zinc-800 text-[11px] font-bold text-blue-400">
+            AG
+          </AvatarFallback>
+        </Avatar>
       </div>
     </header>
   );
 }
-

@@ -2,11 +2,19 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { MemoryPanel } from "../../features/chat/components/memory-panel";
+import { MemoryPanel } from "@/app/features/chat/components/memory-panel";
+import { PageHeader } from "@/components/shared/page-header";
+import { ListSkeleton } from "@/components/shared/loading-skeleton";
 
 export default function MemoryPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-sm text-zinc-500">Loading memory...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-8">
+          <ListSkeleton count={4} />
+        </div>
+      }
+    >
       <MemoryContent />
     </Suspense>
   );
@@ -14,25 +22,18 @@ export default function MemoryPage() {
 
 function MemoryContent() {
   const searchParams = useSearchParams();
-
   const conversationId = searchParams.get("conversation");
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Memory</h1>
-
-            <p className="mt-1 text-sm text-zinc-500">
-              View memories created by the Terminal Agent.
-            </p>
-          </div>
-        </div>
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+        <PageHeader
+          title="Agent Memory"
+          description="Contextual memories, outputs, and observations stored during conversational tasks."
+        />
 
         <MemoryPanel conversationId={conversationId ?? undefined} />
       </div>
     </div>
   );
 }
-

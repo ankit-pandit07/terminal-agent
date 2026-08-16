@@ -1,16 +1,14 @@
-import { PlannerPanel } from "../../features/chat/components/planner-panel";
+import { PlannerPanel } from "@/app/features/chat/components/planner-panel";
+import { PageHeader } from "@/components/shared/page-header";
 
 export default function PlannerPage() {
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-6xl px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Planner</h1>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            Create, review, and execute agent plans.
-          </p>
-        </div>
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+        <PageHeader
+          title="Task Planner"
+          description="Create structured multi-step plans, review execution paths, and trigger autonomous agent tasks."
+        />
 
         <PlannerPanel />
       </div>

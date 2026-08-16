@@ -15,31 +15,34 @@ export function Dashboard({ children }: Props) {
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+    // Open inspector on larger desktop screens by default
+    if (typeof window !== "undefined" && window.innerWidth >= 1280) {
       setInspectorOpen(true);
     }
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950 text-white">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-zinc-950 text-zinc-100 antialiased">
+      {/* Left Sidebar */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
-      {/* Main Column */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
+      {/* Main App Column */}
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        {/* Top Header */}
         <Header
           onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
           onToggleInspector={() => setInspectorOpen(!inspectorOpen)}
           inspectorOpen={inspectorOpen}
         />
 
-        {/* Content Body + Inspector */}
+        {/* Content Body + Right Inspector */}
         <div className="flex flex-1 overflow-hidden">
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className="flex-1 overflow-y-auto bg-zinc-950/60 focus:outline-hidden">
+            {children}
+          </main>
 
           <Inspector
             isOpen={inspectorOpen}
@@ -47,10 +50,9 @@ export function Dashboard({ children }: Props) {
           />
         </div>
 
-        {/* Console / Terminal */}
+        {/* Bottom Terminal Output Console */}
         <Terminal />
       </div>
     </div>
   );
 }
-
