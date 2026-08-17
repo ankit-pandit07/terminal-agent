@@ -6,8 +6,10 @@ import {
   createPlan,
   executePlan,
   type Plan,
+  type PlanStep,
   type PlanExecutionResult,
 } from "../api/planning.api";
+
 
 import { confirmAction, cancelAction } from "../api/chat.api";
 
@@ -106,6 +108,41 @@ export function usePlanner() {
   }
 }
 
+  function updateStep(index: number, updatedStep: PlanStep) {
+    if (!plan) return;
+    const newSteps = [...plan.steps];
+    newSteps[index] = updatedStep;
+    setPlan({
+      ...plan,
+      steps: newSteps,
+    });
+  }
+
+  function removeStep(index: number) {
+    if (!plan) return;
+    const newSteps = plan.steps.filter((_, i) => i !== index);
+    setPlan({
+      ...plan,
+      steps: newSteps,
+    });
+  }
+
+  function moveStep(index: number, direction: "up" | "down") {
+    if (!plan) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= plan.steps.length) return;
+
+    const newSteps = [...plan.steps];
+    const temp = newSteps[index]!;
+    newSteps[index] = newSteps[targetIndex]!;
+    newSteps[targetIndex] = temp;
+
+    setPlan({
+      ...plan,
+      steps: newSteps,
+    });
+  }
+
   function clear() {
     setPlan(null);
     setResult(null);
@@ -123,6 +160,10 @@ export function usePlanner() {
     runPlan,
     confirmPlan,
     cancelPlan,
+    updateStep,
+    removeStep,
+    moveStep,
     clear,
   };
 }
+

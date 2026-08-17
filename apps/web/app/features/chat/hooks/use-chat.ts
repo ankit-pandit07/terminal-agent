@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useChatStore } from "../store/chat.store";
 import { useConversationStore } from "../store/conversation.store";
@@ -16,6 +16,7 @@ export interface RecoveryEvent {
 
 export function useChat() {
   const router = useRouter();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const loading = useChatStore((s) => s.loading);
   const setLoading = useChatStore((s) => s.setLoading);
@@ -32,8 +33,19 @@ export function useChat() {
   // Recovery state
   const [recovery, setRecovery] = useState<RecoveryEvent | null>(null);
 
+  function stop() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setLoading(false);
+    }
+  }
+
   async function stream(message: string) {
     if (loading) return;
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setLoading(true);
     setRecovery(null);
@@ -68,13 +80,13 @@ export function useChat() {
                 ? event.confirmationId
                 : undefined;
 
-            const message =
+            const msg =
               typeof event.message === "string"
                 ? event.message
                 : "Confirmation required.";
 
             if (confirmationId) {
-              setConfirmation(confirmationId, message);
+              setConfirmation(confirmationId, msg);
             }
 
             return;
@@ -105,14 +117,25 @@ export function useChat() {
 
           router.push(`/chat?conversation=${newConversationId}`);
         },
+        controller.signal,
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      if (
+        (error instanceof Error && error.name === "AbortError") ||
+        controller.signal.aborted
+      ) {
+        console.log("Chat stream cancelled by user.");
+        addAssistantMessage("*Generation was cancelled.*");
+        return;
+      }
+
       console.error("Chat stream failed:", error);
 
       addAssistantMessage(
         "Sorry, something went wrong while processing your request.",
       );
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
     }
   }
@@ -121,5 +144,7 @@ export function useChat() {
     loading,
     recovery,
     stream,
+    stop,
   };
 }
+

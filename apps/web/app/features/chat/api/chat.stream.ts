@@ -14,6 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 export async function streamChat(
   input: StreamInput,
   onEvent: (event: StreamEvent) => void,
+  signal?: AbortSignal,
 ) {
   const url = `${API_URL}/chat/stream`;
 
@@ -23,6 +24,7 @@ export async function streamChat(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),
+    signal,
   });
 
   if (!response.ok) {
@@ -39,6 +41,11 @@ export async function streamChat(
   let buffer = "";
 
   while (true) {
+    if (signal?.aborted) {
+      void reader.cancel();
+      break;
+    }
+
     const { done, value } = await reader.read();
 
     if (done) {
@@ -83,3 +90,4 @@ export async function streamChat(
     }
   }
 }
+

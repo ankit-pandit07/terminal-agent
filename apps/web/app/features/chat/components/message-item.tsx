@@ -3,6 +3,7 @@
 import { User, Bot } from "lucide-react";
 import { Message } from "../store/chat.store";
 import { CopyButton } from "@/components/shared/copy-button";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -63,17 +64,21 @@ export function MessageItem({ message }: Props) {
         {/* Bubble */}
         <div
           className={cn(
-            "relative rounded-2xl px-4 py-3.5 shadow-md transition-all leading-relaxed text-sm",
+            "relative rounded-2xl px-4 py-3.5 shadow-md transition-all leading-relaxed text-sm w-full",
             isUser
               ? "rounded-tr-xs bg-blue-600 text-white selection:bg-blue-800 selection:text-white"
               : "rounded-tl-xs border border-zinc-800 bg-zinc-900/90 text-zinc-100 selection:bg-zinc-800",
           )}
         >
-          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+          {isUser ? (
+            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+          ) : (
+            <MarkdownContent content={message.content} />
+          )}
 
-          {/* Copy Button Hover */}
+          {/* Full Message Copy Button on Hover */}
           {!isUser && (
-            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute right-2.5 top-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <CopyButton text={message.content} size="icon-sm" />
             </div>
           )}
@@ -82,3 +87,4 @@ export function MessageItem({ message }: Props) {
     </div>
   );
 }
+

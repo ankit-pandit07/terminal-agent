@@ -9,6 +9,7 @@ import {
   Bot,
   Circle,
   Folder,
+  Search,
 } from "lucide-react";
 import { useChatStore } from "@/app/features/chat/store/chat.store";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface HeaderProps {
   onToggleMobileSidebar: () => void;
   onToggleInspector: () => void;
   inspectorOpen: boolean;
+  onOpenCommandPalette?: () => void;
 }
 
 const ROUTE_NAMES: Record<string, string> = {
@@ -36,6 +38,7 @@ export function Header({
   onToggleMobileSidebar,
   onToggleInspector,
   inspectorOpen,
+  onOpenCommandPalette,
 }: HeaderProps) {
   const pathname = usePathname();
   const loading = useChatStore((s) => s.loading);
@@ -68,8 +71,24 @@ export function Header({
         </div>
       </div>
 
-      {/* Right section: live status pill, inspector toggle, settings & avatar */}
+      {/* Right section: Command Palette trigger, live status pill, inspector toggle, settings & avatar */}
       <div className="flex items-center gap-2">
+        {/* Command Palette Trigger */}
+        {onOpenCommandPalette && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenCommandPalette}
+            className="hidden md:flex items-center gap-2 h-8 px-2.5 text-xs text-zinc-400 bg-zinc-900/60 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700 select-none cursor-pointer"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Commands</span>
+            <kbd className="pointer-events-none ml-1 inline-flex h-4 select-none items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 px-1 font-mono text-[10px] text-zinc-400">
+              <span>Ctrl</span>K
+            </kbd>
+          </Button>
+        )}
+
         {/* Agent live status indicator */}
         <div
           className={cn(
@@ -127,3 +146,4 @@ export function Header({
     </header>
   );
 }
+

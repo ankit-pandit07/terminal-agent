@@ -11,6 +11,9 @@ import {
   Sparkles,
   RefreshCw,
   Wrench,
+  Pencil,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { usePlanner } from "../hooks/use-planner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +21,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { JsonViewer } from "@/components/shared/json-viewer";
+import { EditStepDialog } from "./edit-step-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 const EXAMPLE_PLANS = [
@@ -29,6 +43,8 @@ const EXAMPLE_PLANS = [
 
 export function PlannerPanel() {
   const [message, setMessage] = useState("");
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [deletingStepIndex, setDeletingStepIndex] = useState<number | null>(null);
 
   const {
     plan,
@@ -40,8 +56,16 @@ export function PlannerPanel() {
     runPlan,
     confirmPlan,
     cancelPlan,
+    updateStep,
+    removeStep,
+    moveStep,
     clear,
   } = usePlanner();
+
+  const editingStep =
+    editingStepIndex !== null && plan ? plan.steps[editingStepIndex] || null : null;
+  const deletingStep =
+    deletingStepIndex !== null && plan ? plan.steps[deletingStepIndex] || null : null;
 
   async function handleCreatePlan() {
     if (!message.trim() || loading) return;
@@ -157,7 +181,7 @@ export function PlannerPanel() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  Review the scheduled tool steps before executing.
+                  Review or edit the scheduled tool steps before executing.
                 </CardDescription>
               </div>
 
@@ -174,7 +198,7 @@ export function PlannerPanel() {
                 className="rounded-xl border border-zinc-800/90 bg-zinc-950/70 p-4 transition hover:border-zinc-700"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold text-blue-400 border border-zinc-700">
                       {index + 1}
                     </span>
@@ -198,6 +222,57 @@ export function PlannerPanel() {
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Step Action Controls (Reorder, Edit, Remove) */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => moveStep(index, "up")}
+                      disabled={index === 0 || executing}
+                      className="h-7 w-7 text-zinc-400 hover:text-white disabled:opacity-30"
+                      title="Move step up"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => moveStep(index, "down")}
+                      disabled={index === plan.steps.length - 1 || executing}
+                      className="h-7 w-7 text-zinc-400 hover:text-white disabled:opacity-30"
+                      title="Move step down"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setEditingStepIndex(index)}
+                      disabled={executing}
+                      className="h-7 w-7 text-zinc-400 hover:text-blue-400"
+                      title="Edit step parameters"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setDeletingStepIndex(index)}
+                      disabled={executing}
+                      className="h-7 w-7 text-zinc-400 hover:text-red-400"
+                      title="Remove step"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
 
@@ -237,6 +312,55 @@ export function PlannerPanel() {
           )}
         </Card>
       )}
+
+      {/* Edit Step Dialog */}
+      <EditStepDialog
+        step={editingStep}
+        stepIndex={editingStepIndex}
+        open={editingStepIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingStepIndex(null);
+        }}
+        onSave={(idx, updatedStep) => {
+          updateStep(idx, updatedStep);
+          setEditingStepIndex(null);
+        }}
+      />
+
+      {/* Remove Step AlertDialog */}
+      <AlertDialog
+        open={deletingStepIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingStepIndex(null);
+        }}
+      >
+        <AlertDialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Plan Step?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-400">
+              Are you sure you want to remove Step #{deletingStepIndex !== null ? deletingStepIndex + 1 : ""}{" "}
+              ({deletingStep?.tool}) from this plan? This action can be undone by regenerating the plan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-800 text-zinc-300 hover:bg-zinc-900">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingStepIndex !== null) {
+                  removeStep(deletingStepIndex);
+                  setDeletingStepIndex(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              Remove Step
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {/* Execution Result */}
       {result && (

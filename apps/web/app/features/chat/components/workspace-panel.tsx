@@ -13,8 +13,12 @@ import {
   Search,
   CheckCircle2,
   XCircle,
+  Play,
+  RefreshCw,
 } from "lucide-react";
 import { useWorkspace } from "../hooks/use-workspace";
+import { executePlan } from "../api/planning.api";
+import { useChatStore } from "../store/chat.store";
 import { CopyButton } from "@/components/shared/copy-button";
 import { ErrorState } from "@/components/shared/error-state";
 import { CardGridSkeleton } from "@/components/shared/loading-skeleton";
@@ -22,10 +26,71 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function WorkspacePanel() {
   const { workspace, loading, error, refresh } = useWorkspace();
   const [depSearch, setDepSearch] = useState("");
+  const [runningScript, setRunningScript] = useState<string | null>(null);
+  const [scriptStatus, setScriptStatus] = useState<
+    Record<string, "success" | "failed" | null>
+  >({});
+  const addEvent = useChatStore((s) => s.addEvent);
+
+  async function handleRunScript(name: string) {
+    if (runningScript) return;
+    setRunningScript(name);
+    setScriptStatus((prev) => ({ ...prev, [name]: null }));
+
+    addEvent({
+      type: "tool-start",
+      tool: "terminal",
+      message: `Running package script: npm run ${name}`,
+    });
+
+    try {
+      const result = await executePlan({
+        source: "rule",
+        steps: [
+          {
+            tool: "terminal",
+            input: {
+              command: `npm run ${name}`,
+            },
+            reason: `Execute workspace package script: npm run ${name}`,
+          },
+        ],
+      });
+
+      addEvent({
+        type: "tool-complete",
+        tool: "terminal",
+        success: result.success,
+        message:
+          result.output ||
+          (result.success
+            ? `Script npm run ${name} completed.`
+            : `Script npm run ${name} failed.`),
+      });
+
+      setScriptStatus((prev) => ({
+        ...prev,
+        [name]: result.success ? "success" : "failed",
+      }));
+    } catch (err) {
+      console.error("Failed to run script:", err);
+      addEvent({
+        type: "error",
+        message: `Failed to run script npm run ${name}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      });
+      setScriptStatus((prev) => ({ ...prev, [name]: "failed" }));
+    } finally {
+      setRunningScript(null);
+    }
+  }
 
   if (loading) {
     return <CardGridSkeleton count={6} />;
@@ -139,7 +204,9 @@ export function WorkspacePanel() {
                 type="text"
                 placeholder="Filter dependencies..."
                 value={depSearch}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDepSearch(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setDepSearch(e.target.value)
+                }
                 className="h-8 pl-8 text-xs bg-zinc-950/80 border-zinc-800"
               />
             </div>
@@ -150,7 +217,9 @@ export function WorkspacePanel() {
           {workspace.dependencies.length === 0 ? (
             <p className="text-xs text-zinc-500">No dependencies detected.</p>
           ) : filteredDeps.length === 0 ? (
-            <p className="text-xs text-zinc-500">No dependencies match "{depSearch}".</p>
+            <p className="text-xs text-zinc-500">
+              No dependencies match &quot;{depSearch}&quot;.
+            </p>
           ) : (
             <div className="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto pr-1">
               {filteredDeps.map((dep) => (
@@ -196,11 +265,49 @@ export function WorkspacePanel() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 max-w-md">
+                  <div className="flex flex-wrap items-center gap-2 max-w-full sm:max-w-md">
                     <code className="font-mono text-[11px] text-zinc-400 truncate bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800/80">
                       {command}
                     </code>
+
+                    {scriptStatus[name] === "success" && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium font-mono shrink-0">
+                        <CheckCircle2 className="h-3 w-3" /> Done
+                      </span>
+                    )}
+
+                    {scriptStatus[name] === "failed" && (
+                      <span className="flex items-center gap-1 text-[10px] text-rose-400 font-medium font-mono shrink-0">
+                        <XCircle className="h-3 w-3" /> Failed
+                      </span>
+                    )}
+
                     <CopyButton text={`npm run ${name}`} size="icon-sm" />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleRunScript(name)}
+                      disabled={Boolean(runningScript)}
+                      className={cn(
+                        "h-7 px-2.5 text-xs gap-1.5 border-zinc-800 bg-zinc-900/80 text-zinc-200 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer shrink-0",
+                        runningScript === name &&
+                          "border-blue-500/50 bg-blue-950/30 text-blue-300",
+                      )}
+                    >
+                      {runningScript === name ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
+                          <span>Running...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3 w-3 fill-current text-emerald-400" />
+                          <span>Run</span>
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -211,6 +318,7 @@ export function WorkspacePanel() {
     </div>
   );
 }
+
 
 function OverviewCard({
   icon: Icon,
