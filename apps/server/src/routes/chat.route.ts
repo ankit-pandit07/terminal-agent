@@ -112,7 +112,6 @@ router.get("/executions/:conversationId", async (req, res, next) => {
 router.get("/session", async (_, res, next) => {
   try {
     const session = await agent.getSession();
-    console.log(session);
     res.json({
       success: true,
       session,

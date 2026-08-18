@@ -7,10 +7,15 @@ import morgan from "morgan";
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
 import helmet from 'helmet';
+import { env } from './config/env.js';
 
 const app=express();
 
-app.use(cors());
+const corsOptions: cors.CorsOptions = env.CORS_ORIGIN
+  ? { origin: env.CORS_ORIGIN.includes(",") ? env.CORS_ORIGIN.split(",").map((s) => s.trim()) : env.CORS_ORIGIN }
+  : {};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(helmet());

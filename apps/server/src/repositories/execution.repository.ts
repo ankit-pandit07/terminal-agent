@@ -1,5 +1,5 @@
 import { ExecutionStatus } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
+import { prisma } from "../db/prisma.js";
 
 export class ExecutionRepository {
   async create(conversationId: string, goal: string) {

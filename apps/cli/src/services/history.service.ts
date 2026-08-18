@@ -8,7 +8,7 @@ export interface HistoryItem{
 }
 
 export class HistoryService {
-    private readonly baseUrl = "http://localhost:5000";
+    private readonly baseUrl = process.env.API_URL || "http://localhost:5000";
 
     async getHistory(): Promise<HistoryItem[]>{
         const response=await fetch(`${this.baseUrl}/chat/history`);

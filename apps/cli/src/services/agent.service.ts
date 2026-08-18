@@ -8,7 +8,7 @@ export interface ChatResponse {
 
 export class AgentService {
     private readonly api= axios.create({
-        baseURL:"http://localhost:5000",
+        baseURL: process.env.API_URL || "http://localhost:5000",
         timeout:30000,
     });
 

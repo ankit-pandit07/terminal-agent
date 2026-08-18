@@ -2,7 +2,7 @@ import { StreamEvent } from "../types/stream-event.js";
 import { StreamRequest } from "./stream.types.js";
 
 export class StreamService {
-  private readonly baseUrl = "http://localhost:5000";
+  private readonly baseUrl = process.env.API_URL || "http://localhost:5000";
 
   async stream(
     request:StreamRequest,

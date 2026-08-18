@@ -1,5 +1,5 @@
 export class ConversationService {
-  private readonly baseUrl = "http://localhost:5000";
+  private readonly baseUrl = process.env.API_URL || "http://localhost:5000";
 
   async getConversation(id: string) {
     const response = await fetch(`${this.baseUrl}/chat/conversations/${id}`);

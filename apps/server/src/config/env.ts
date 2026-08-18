@@ -11,4 +11,5 @@ export const env = {
     DATABASE_URL: process.env.DATABASE_URL || "",
     OLLAMA_URL: process.env.OLLAMA_URL ?? "http://localhost:11434",
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+    CORS_ORIGIN: process.env.CORS_ORIGIN || "",
 };
