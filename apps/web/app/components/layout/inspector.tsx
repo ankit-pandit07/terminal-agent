@@ -6,9 +6,7 @@ import {
   X,
   Search,
   Activity,
-  Layers,
-  Sparkles,
-  Zap,
+  Trash2,
 } from "lucide-react";
 import { useChatStore } from "@/app/features/chat/store/chat.store";
 import { JsonViewer } from "@/components/shared/json-viewer";
@@ -32,10 +30,9 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
   const filteredEvents = events.filter((e) => {
     if (!filterQuery) return true;
     const q = filterQuery.toLowerCase();
-    return (
-      e.type.toLowerCase().includes(q) ||
-      JSON.stringify(e).toLowerCase().includes(q)
-    );
+    const typeStr = String(e.type ?? "").toLowerCase();
+    const jsonStr = JSON.stringify(e).toLowerCase();
+    return typeStr.includes(q) || jsonStr.includes(q);
   });
 
   if (!isOpen) return null;
@@ -78,7 +75,8 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
               className="h-6 px-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
               title="Clear telemetry frames"
             >
-              Clear
+              <Trash2 className="h-3 w-3 mr-1" />
+              <span>Clear</span>
             </Button>
           )}
 
@@ -97,14 +95,23 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
       {/* Filter search bar */}
       <div className="border-b border-zinc-800/80 p-3">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
           <Input
             type="text"
             placeholder="Filter event payload or type..."
             value={filterQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterQuery(e.target.value)}
-            className="h-8 pl-8 text-xs bg-zinc-900/80 border-zinc-800 placeholder:text-zinc-500"
+            className="h-8 pl-8 pr-7 text-xs bg-zinc-900/80 border-zinc-800 placeholder:text-zinc-500"
           />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center text-zinc-500 hover:text-zinc-300 cursor-pointer"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -119,9 +126,18 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
             />
           </div>
         ) : filteredEvents.length === 0 ? (
-          <p className="py-8 text-center text-xs text-zinc-500">
-            No frames match "{filterQuery}".
-          </p>
+          <div className="py-8 text-center">
+            <p className="text-xs text-zinc-500">
+              No frames match &quot;{filterQuery}&quot;.
+            </p>
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="mt-2 text-[11px] text-blue-400 hover:underline cursor-pointer"
+            >
+              Clear filter
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
             {filteredEvents.map((evt, idx) => (
@@ -133,7 +149,7 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
                   <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                     <span className="font-mono text-xs font-semibold text-zinc-200">
-                      {evt.type}
+                      {String(evt.type ?? "event")}
                     </span>
                   </div>
                   <span className="font-mono text-[10px] text-zinc-500">

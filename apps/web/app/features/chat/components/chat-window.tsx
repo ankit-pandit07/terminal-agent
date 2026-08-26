@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useChatStore } from "../store/chat.store";
 import { useChat } from "../hooks/use-chat";
-import { EventList } from "./event-list";
 import { MessageList } from "./message-list";
 import { confirmAction, cancelAction } from "../api/chat.api";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,7 @@ export function ChatWindow() {
     bottomRef.current?.scrollIntoView({
       behavior: "smooth",
     });
-  }, [messages, events, confirmationId]);
+  }, [messages, loading, confirmationId]);
 
   async function handleConfirm() {
     if (!confirmationId || processing) return;
@@ -99,7 +98,7 @@ export function ChatWindow() {
     void stream(prompt);
   }
 
-  const isEmpty = messages.length === 0 && events.length === 0;
+  const isEmpty = messages.length === 0;
 
   return (
     <div className="mx-auto flex h-full w-full max-w-4xl flex-col overflow-y-auto px-4 py-6 sm:px-6">
@@ -142,9 +141,6 @@ export function ChatWindow() {
           </div>
         </div>
       )}
-
-      {/* Agent Activity Timeline */}
-      <EventList />
 
       {/* Messages */}
       <MessageList />
