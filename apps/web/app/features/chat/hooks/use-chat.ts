@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-
 import { useChatStore } from "../store/chat.store";
 import { useConversationStore } from "../store/conversation.store";
 import { getConversation } from "../api/conversation.api";
@@ -15,7 +13,6 @@ export interface RecoveryEvent {
 }
 
 export function useChat() {
-  const router = useRouter();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loading = useChatStore((s) => s.loading);
@@ -27,8 +24,12 @@ export function useChat() {
   const addAssistantMessage = useChatStore((s) => s.addAssistantMessage);
   const addEvent = useChatStore((s) => s.addEvent);
   const setConfirmation = useChatStore((s) => s.setConfirmation);
+
   const addConversation = useConversationStore((s) => s.addConversation);
   const selectConversation = useConversationStore((s) => s.selectConversation);
+  const updateConversationTimestamp = useConversationStore(
+    (s) => s.updateConversationTimestamp
+  );
 
   // Recovery state
   const [recovery, setRecovery] = useState<RecoveryEvent | null>(null);
@@ -42,7 +43,7 @@ export function useChat() {
   }
 
   async function stream(message: string) {
-    if (loading) return;
+    if (loading || !message.trim()) return;
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -52,13 +53,19 @@ export function useChat() {
 
     addUserMessage(message);
 
+    // If already in an active conversation, update its timestamp in sidebar
+    if (conversationId) {
+      updateConversationTimestamp(conversationId);
+    }
+
     try {
+      let finalHandled = false;
+
       await streamChat(
         {
           message,
           ...(conversationId ? { conversationId } : {}),
         },
-
         async (event) => {
           addEvent(event);
 
@@ -69,11 +76,10 @@ export function useChat() {
               reason: String(event.reason ?? "Recovery action required."),
               confidence: Number(event.confidence ?? 0),
             });
-
             return;
           }
 
-          // Confirmation
+          // Confirmation required
           if (event.type === "confirmation-required") {
             const confirmationId =
               typeof event.confirmationId === "string"
@@ -88,36 +94,52 @@ export function useChat() {
             if (confirmationId) {
               setConfirmation(confirmationId, msg);
             }
-
             return;
           }
 
-          // Ignore other events
-          if (event.type !== "completed") {
-            return;
+          // Handle final completion events: "completed" or "done"
+          if (event.type === "completed" || event.type === "done") {
+            if (finalHandled && event.type === "done") return;
+            finalHandled = true;
+
+            const responseText =
+              typeof event.response === "string"
+                ? event.response
+                : typeof event.output === "string"
+                  ? event.output
+                  : "";
+
+            if (responseText) {
+              addAssistantMessage(responseText);
+            }
+
+            const activeConvId =
+              typeof event.conversationId === "string"
+                ? event.conversationId
+                : conversationId;
+
+            if (activeConvId) {
+              setConversationId(activeConvId);
+
+              try {
+                const freshConv = await getConversation(activeConvId);
+                addConversation(freshConv);
+                selectConversation(freshConv.id);
+              } catch (err) {
+                console.error("Failed to refresh conversation history:", err);
+              }
+
+              // Update URL without causing page remount
+              if (typeof window !== "undefined") {
+                const targetUrl = `/chat?conversation=${activeConvId}`;
+                if (window.location.search !== `?conversation=${activeConvId}`) {
+                  window.history.replaceState(null, "", targetUrl);
+                }
+              }
+            }
           }
-
-          // Completed
-          addAssistantMessage(String(event.response ?? ""));
-          const newConversationId = event.conversationId;
-          if (typeof newConversationId !== "string") {
-            return;
-          }
-
-          setConversationId(newConversationId);
-
-          try {
-            const conversation = await getConversation(newConversationId);
-
-            addConversation(conversation);
-            selectConversation(conversation.id);
-          } catch (error) {
-            console.error("Failed to load new conversation:", error);
-          }
-
-          router.push(`/chat?conversation=${newConversationId}`);
         },
-        controller.signal,
+        controller.signal
       );
     } catch (error: unknown) {
       if (
@@ -130,9 +152,8 @@ export function useChat() {
       }
 
       console.error("Chat stream failed:", error);
-
       addAssistantMessage(
-        "Sorry, something went wrong while processing your request.",
+        "Sorry, something went wrong while processing your request. Please try again."
       );
     } finally {
       abortControllerRef.current = null;
@@ -147,4 +168,3 @@ export function useChat() {
     stop,
   };
 }
-

@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { authApi } from "../api/auth.api";
+import { useConversationStore } from "@/app/features/chat/store/conversation.store";
+import { useChatStore } from "@/app/features/chat/store/chat.store";
 import type {
   User,
   LoginPayload,
@@ -48,6 +50,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authenticated: false,
         loading: false,
       });
+      useConversationStore.getState().reset();
+      useChatStore.getState().clear();
       return false;
     } catch {
       set({
@@ -55,6 +59,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authenticated: false,
         loading: false,
       });
+      useConversationStore.getState().reset();
+      useChatStore.getState().clear();
       return false;
     }
   },
@@ -64,6 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.login(data);
       if (res.success && res.user) {
+        useConversationStore.getState().reset();
+        useChatStore.getState().clear();
         set({
           user: res.user,
           authenticated: true,
@@ -94,6 +102,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.register(data);
       if (res.success && res.user) {
+        useConversationStore.getState().reset();
+        useChatStore.getState().clear();
         set({
           user: res.user,
           authenticated: true,
@@ -124,6 +134,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.verifyOtp(data);
       if (res.success && res.user) {
+        useConversationStore.getState().reset();
+        useChatStore.getState().clear();
         set({
           user: res.user,
           authenticated: true,
@@ -156,6 +168,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // ignore logout failure on network error
     } finally {
+      useConversationStore.getState().reset();
+      useChatStore.getState().clear();
       set({
         user: null,
         authenticated: false,

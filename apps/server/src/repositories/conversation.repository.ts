@@ -1,20 +1,23 @@
 import { prisma } from "../db/prisma.js";
 
-function createConversationTitle(message: string) {
-  const title = message
-    .trim()
-    .replace(/\s+/g, " ");
+function createConversationTitle(message: string): string {
+  // Remove markdown code fences, headers, extra whitespace
+  const clean = message
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/^#+\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  if (!title) {
+  if (!clean) {
     return "New Conversation";
   }
 
-  // Maximum 60 characters
-  if (title.length <= 60) {
-    return title;
+  // Maximum 60 characters for DB title
+  if (clean.length <= 60) {
+    return clean;
   }
 
-  return `${title.slice(0, 57)}...`;
+  return `${clean.slice(0, 57)}...`;
 }
 
 export class ConversationRepository {
@@ -57,8 +60,8 @@ export class ConversationRepository {
 
     if (!conversation) return null;
 
-    // Enforce ownership if userId is specified
-    if (userId && conversation.userId && conversation.userId !== userId) {
+    // Enforce strict ownership if userId is specified
+    if (userId && conversation.userId !== userId) {
       return null;
     }
 
@@ -68,7 +71,7 @@ export class ConversationRepository {
   async delete(id: string, userId?: string) {
     if (userId) {
       const conv = await prisma.conversation.findUnique({ where: { id } });
-      if (!conv || (conv.userId && conv.userId !== userId)) {
+      if (!conv || conv.userId !== userId) {
         throw new Error("Conversation not found or unauthorized");
       }
     }
@@ -80,13 +83,20 @@ export class ConversationRepository {
     });
   }
 
-  async findRecent(limit = 10, userId?: string) {
+  async findRecent(limit = 20, userId?: string) {
     return prisma.conversation.findMany({
       where: userId ? { userId } : {},
       take: limit,
       orderBy: {
-        createdAt: "desc",
+        updatedAt: "desc",
       },
+    });
+  }
+
+  async updateTimestamp(id: string) {
+    return prisma.conversation.update({
+      where: { id },
+      data: { updatedAt: new Date() },
     });
   }
 }
