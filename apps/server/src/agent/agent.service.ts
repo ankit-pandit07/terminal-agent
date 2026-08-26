@@ -43,24 +43,24 @@ export class AgentService {
     return processAgentRequest(request, emitter);
   }
 
-  async deleteConversation(conversationId: string) {
-    return deleteConversation(conversationId);
+  async deleteConversation(conversationId: string, userId?: string) {
+    return deleteConversation(conversationId, userId);
   }
 
-  async getConversation(conversationId: string) {
-    return getConversation(conversationId);
+  async getConversation(conversationId: string, userId?: string) {
+    return getConversation(conversationId, userId);
   }
 
-  async getExecutions(conversationId: string) {
-    return getExecutions(conversationId);
+  async getExecutions(conversationId: string, userId?: string) {
+    return getExecutions(conversationId, userId);
   }
 
-  async getExecution(executionId: string) {
-    return getExecution(executionId);
+  async getExecution(executionId: string, userId?: string) {
+    return getExecution(executionId, userId);
   }
 
-  async getHistory() {
-    return getHistory();
+  async getHistory(userId?: string) {
+    return getHistory(userId);
   }
 
   async getSession() {
@@ -78,8 +78,9 @@ export class AgentService {
   async executePlan(
     plan: Plan,
     emitter?: AgentEventEmitter,
+    userId?: string,
   ): Promise<ExecutionResult> {
-    return executePlan(plan, emitter);
+    return executePlan(plan, emitter, userId);
   }
 
   getTools() {
@@ -102,22 +103,23 @@ export class AgentService {
     return getToolsByCategory(category);
   }
 
-  async getMemoryHistory() {
-    return this.memoryService.history();
+  async getMemoryHistory(userId?: string) {
+    return this.memoryService.history(userId);
   }
 
-  async getConversationMemory(conversationId: string) {
-    return this.memoryService.getByConversation(conversationId);
+  async getConversationMemory(conversationId: string, userId?: string) {
+    return this.memoryService.getByConversation(conversationId, userId);
   }
 
   async confirmExecution(
     confirmationId: string,
     emitter?: AgentEventEmitter,
+    userId?: string,
   ): Promise<{
     success: boolean;
     response: string;
   }> {
-    const confirmation = confirmationService.confirm(confirmationId);
+    const confirmation = confirmationService.confirm(confirmationId, userId);
 
     if (!confirmation) {
       return {
@@ -164,23 +166,26 @@ export class AgentService {
     }
   }
 
-  cancelConfirmation(confirmationId: string): {
-  success: boolean;
-  response: string;
-} {
-  const cancelled = confirmationService.cancel(confirmationId);
+  cancelConfirmation(
+    confirmationId: string,
+    userId?: string
+  ): {
+    success: boolean;
+    response: string;
+  } {
+    const cancelled = confirmationService.cancel(confirmationId, userId);
 
-  if (!cancelled) {
+    if (!cancelled) {
+      return {
+        success: false,
+        response:
+          "Confirmation not found or it has already been handled.",
+      };
+    }
+
     return {
-      success: false,
-      response:
-        "Confirmation not found or it has already been handled.",
+      success: true,
+      response: "Confirmation cancelled. No action was executed.",
     };
   }
-
-  return {
-    success: true,
-    response: "Confirmation cancelled. No action was executed.",
-  };
-}
 }

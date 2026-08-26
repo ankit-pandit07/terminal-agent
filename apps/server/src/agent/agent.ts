@@ -2,7 +2,8 @@ import type { AgentEventEmitter } from "../events/agent-event-emitter.js";
 
 export interface AgentRequest {
   message: string;
-  conversationId?: string;
+  conversationId?: string | undefined;
+  userId?: string | undefined;
 }
 
 export interface AgentResponse {

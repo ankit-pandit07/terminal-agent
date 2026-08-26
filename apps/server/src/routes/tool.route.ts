@@ -1,8 +1,12 @@
 import { Router } from "express";
 import { AgentService } from "../agent/agent.service.js";
 import type { ToolCategory } from "../tools/base/tool.interface.js";
+import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
+
+// Require auth for tool registry inspection and configuration
+router.use(requireAuth);
 
 const agent = new AgentService();
 

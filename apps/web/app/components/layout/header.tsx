@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   SlidersHorizontal,
   Settings,
-  Bot,
-  Circle,
-  Folder,
   Search,
+  LogOut,
+  User as UserIcon,
+  Shield,
+  Laptop,
 } from "lucide-react";
 import { useChatStore } from "@/app/features/chat/store/chat.store";
+import { useAuthStore } from "@/app/features/auth/store/auth.store";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -41,12 +52,35 @@ export function Header({
   onOpenCommandPalette,
 }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const loading = useChatStore((s) => s.loading);
+  const { user, logout } = useAuthStore();
 
   const matchedRoute = Object.keys(ROUTE_NAMES).find(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
   const currentTitle = matchedRoute ? ROUTE_NAMES[matchedRoute] : "Dashboard";
+
+  // Compute user initials
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.email
+      ? user.email[0]?.toUpperCase()
+      : user?.phone
+        ? user.phone.slice(-2)
+        : "AG";
+
+  const userIdentifier = user?.email || user?.phone || "Authenticated Operator";
+
+  async function handleSignOut() {
+    await logout();
+    router.push("/login");
+  }
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-950/80 px-4 backdrop-blur-md">
@@ -71,7 +105,7 @@ export function Header({
         </div>
       </div>
 
-      {/* Right section: Command Palette trigger, live status pill, inspector toggle, settings & avatar */}
+      {/* Right section: Command Palette trigger, live status pill, inspector toggle, settings & user profile dropdown */}
       <div className="flex items-center gap-2">
         {/* Command Palette Trigger */}
         {onOpenCommandPalette && (
@@ -136,12 +170,83 @@ export function Header({
           </Link>
         </Button>
 
-        {/* User avatar */}
-        <Avatar className="h-7 w-7 border border-zinc-800 bg-zinc-900 text-zinc-300 shadow-xs">
-          <AvatarFallback className="bg-zinc-800 text-[11px] font-bold text-blue-400">
-            AG
-          </AvatarFallback>
-        </Avatar>
+        {/* User Profile Dropdown Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full p-0 h-7 w-7 focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
+              aria-label="User account menu"
+            >
+              <Avatar className="h-7 w-7 border border-zinc-800 bg-zinc-900 text-zinc-300 shadow-xs cursor-pointer hover:border-zinc-700 transition-colors">
+                <AvatarFallback className="bg-zinc-800 text-[11px] font-bold text-blue-400">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            align="end"
+            className="w-56 bg-zinc-950 border-zinc-800 text-zinc-200 shadow-2xl p-1"
+          >
+            <DropdownMenuLabel className="font-normal px-2.5 py-2">
+              <div className="flex flex-col space-y-1">
+                <p className="text-xs font-semibold text-white leading-none truncate">
+                  {user?.name || "Operator Account"}
+                </p>
+                <p className="text-[11px] text-zinc-400 font-mono leading-none truncate">
+                  {userIdentifier}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+
+            <DropdownMenuSeparator className="bg-zinc-800/80" />
+
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/settings"
+                  className="cursor-pointer gap-2 text-xs text-zinc-300 focus:bg-zinc-800 focus:text-white"
+                >
+                  <UserIcon className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>Profile & Account</span>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/session"
+                  className="cursor-pointer gap-2 text-xs text-zinc-300 focus:bg-zinc-800 focus:text-white"
+                >
+                  <Laptop className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>Sessions & Devices</span>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/settings"
+                  className="cursor-pointer gap-2 text-xs text-zinc-300 focus:bg-zinc-800 focus:text-white"
+                >
+                  <Shield className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>Security Settings</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator className="bg-zinc-800/80" />
+
+            <DropdownMenuItem
+              onClick={() => void handleSignOut()}
+              className="cursor-pointer gap-2 text-xs text-red-400 focus:bg-red-950/40 focus:text-red-300 font-medium"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

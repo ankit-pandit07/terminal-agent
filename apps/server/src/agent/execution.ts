@@ -24,6 +24,7 @@ const observationService = new ObservationService();
 export async function executePlan(
   plan: Plan,
   emitter?: AgentEventEmitter,
+  userId?: string,
 ): Promise<ExecutionResult> {
   // Validate plan
   validator.validate(plan);
@@ -38,11 +39,13 @@ export async function executePlan(
   if (dangerousStep) {
     const conversation = await conversationRepository.create(
       "Manual Plan Execution",
+      userId,
     );
 
     const execution = await executionRepository.create(
       conversation.id,
       "Manual Plan Execution",
+      userId,
     );
 
     const message = `Confirmation required: ${dangerousStep.reason}`;
@@ -52,6 +55,7 @@ export async function executePlan(
       conversation.id,
       plan,
       message,
+      userId,
     );
 
     const observation = observationService.create(
@@ -72,12 +76,14 @@ export async function executePlan(
   // Create a conversation for manual execution
   const conversation = await conversationRepository.create(
     "Manual Plan Execution",
+    userId,
   );
 
   // Create execution
   const execution = await executionRepository.create(
     conversation.id,
     "Manual Plan Execution",
+    userId,
   );
 
   // Execute plan

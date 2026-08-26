@@ -58,13 +58,14 @@ export async function processAgentRequest(
     if (request.conversationId) {
       conversation = await conversationRepository.findById(
         request.conversationId,
+        request.userId
       );
 
       if (!conversation) {
-        throw new Error("Conversation not found");
+        throw new Error("Conversation not found or unauthorized");
       }
     } else {
-      conversation = await conversationRepository.create(request.message);
+      conversation = await conversationRepository.create(request.message, request.userId);
     }
 
     // Save User Message
@@ -75,12 +76,14 @@ export async function processAgentRequest(
       conversation.id,
       "user-message",
       request.message,
+      request.userId
     );
 
     // Create Execution
     execution = await executionRepository.create(
       conversation.id,
       request.message,
+      request.userId
     );
 
     // Build Context
@@ -146,6 +149,7 @@ ${executionHistory}
           conversation.id,
           plan,
           message,
+          request.userId
         );
 
         emit(emitter, {
@@ -201,6 +205,7 @@ ${executionHistory}
           execution.id,
           "final-output",
           result.output,
+          request.userId
         );
 
         return finishExecution(execution.id, conversation.id, result);
@@ -297,6 +302,7 @@ Generate the next plan according to the recovery action.
           execution.id,
           "final-output",
           result.output,
+          request.userId
         );
 
         return finishExecution(execution.id, conversation.id, result);
@@ -308,6 +314,7 @@ Generate the next plan according to the recovery action.
           execution.id,
           "error",
           "Planner returned an empty plan.",
+          request.userId
         );
 
         return failExecution(
@@ -327,7 +334,7 @@ Generate the next plan according to the recovery action.
     const errorMessage = `Maximum iterations (${MAX_ITERATIONS}) reached without completing the task.`;
 
     // STEP 6: Save max iterations reached to memory
-    await memoryService.saveExecution(execution.id, "error", errorMessage);
+    await memoryService.saveExecution(execution.id, "error", errorMessage, request.userId);
 
     return failExecution(execution.id, conversation.id, errorMessage);
   } catch (error) {
@@ -346,7 +353,7 @@ Generate the next plan according to the recovery action.
       );
 
       // STEP 7: Save error to memory
-      await memoryService.saveExecution(execution.id, "error", errorMessage);
+      await memoryService.saveExecution(execution.id, "error", errorMessage, request.userId);
     }
 
     throw error;

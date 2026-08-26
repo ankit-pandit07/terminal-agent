@@ -6,8 +6,16 @@ import {
   Sliders,
   RefreshCw,
   Cpu,
+  User as UserIcon,
+  ShieldCheck,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/app/features/auth/store/auth.store";
+import { authApi } from "@/app/features/auth/api/auth.api";
 import { PageHeader } from "@/components/shared/page-header";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
@@ -16,8 +24,11 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SettingsPage() {
+  const { user, updateProfile } = useAuthStore();
+
   const [apiUrl] = useState(
     process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000",
   );
@@ -31,6 +42,24 @@ export default function SettingsPage() {
   const [autoScroll, setAutoScroll] = useState(true);
   const [compactEvents, setCompactEvents] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
+
+  // Profile Edit State
+  const [displayName, setDisplayName] = useState(user?.name || "");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.name) {
+      setDisplayName(user.name);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Load local storage preferences
@@ -88,16 +117,74 @@ export default function SettingsPage() {
     localStorage.setItem("nodebase_sound_enabled", String(value));
   }
 
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileSuccess(false);
+
+    const ok = await updateProfile({ name: displayName.trim() });
+    setSavingProfile(false);
+    if (ok) {
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (!currentPassword) {
+      setPasswordError("Please enter your current password.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await authApi.changePassword({
+        currentPassword,
+        newPassword,
+      });
+
+      setChangingPassword(false);
+      if (res.success) {
+        setPasswordSuccess(true);
+        setCurrentPassword("");
+        setNewPassword("");
+        setTimeout(() => setPasswordSuccess(false), 4000);
+      } else {
+        setPasswordError(res.message || "Failed to update password.");
+      }
+    } catch (err: unknown) {
+      setChangingPassword(false);
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to change password.";
+      setPasswordError(msg);
+    }
+  }
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
         <PageHeader
           title="Settings & System Config"
-          description="Manage backend API connectivity, local UI preferences, and view agent architecture specifications."
+          description="Manage your account profile, backend API connectivity, local UI preferences, and view agent architecture specifications."
         />
 
-        <Tabs defaultValue="connection" className="space-y-6">
-          <TabsList className="grid grid-cols-3 sm:w-fit">
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid grid-cols-4 sm:w-fit bg-zinc-950/80 p-1 border border-zinc-800">
+            <TabsTrigger value="profile" className="gap-2 text-xs">
+              <UserIcon className="h-3.5 w-3.5" />
+              <span>Account & Profile</span>
+            </TabsTrigger>
+
             <TabsTrigger value="connection" className="gap-2 text-xs">
               <Server className="h-3.5 w-3.5" />
               <span>Backend Connection</span>
@@ -113,6 +200,204 @@ export default function SettingsPage() {
               <span>Agent Specifications</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Section 0: Account & Profile */}
+          <TabsContent value="profile" className="space-y-6">
+            {/* User Profile Card */}
+            <Card className="border-zinc-800 bg-zinc-900/60 shadow-md">
+              <CardHeader className="p-5 pb-3 border-b border-zinc-800/60">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-blue-400" />
+                      <CardTitle className="text-sm font-semibold text-white">
+                        Personal Profile Details
+                      </CardTitle>
+                    </div>
+                    <CardDescription>
+                      Information associated with your authenticated NodeBase operator account.
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="gap-1 bg-blue-500/10 border-blue-500/30 text-blue-300">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Isolated Workspace</span>
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-4">
+                {profileSuccess && (
+                  <Alert className="py-2.5 bg-emerald-950/40 border-emerald-900/60 text-xs text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <AlertDescription>Profile information updated successfully.</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Display Name
+                      </label>
+                      <Input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="Your Name"
+                        className="h-10 bg-zinc-950/90 border-zinc-800 text-xs text-zinc-200"
+                        disabled={savingProfile}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Email Address
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="email"
+                          value={user?.email || "Not configured"}
+                          readOnly
+                          className="h-10 bg-zinc-950/90 border-zinc-800 text-xs text-zinc-400"
+                        />
+                        {user?.email && (
+                          <Badge variant="outline" className="h-7 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Mobile Phone Number
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={user?.phone || "Not linked"}
+                          readOnly
+                          className="h-10 bg-zinc-950/90 border-zinc-800 font-mono text-xs text-zinc-400"
+                        />
+                        {user?.phone && (
+                          <Badge variant="outline" className="h-7 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                            OTP Verified
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Account Identifier
+                      </label>
+                      <Input
+                        type="text"
+                        value={user?.id || ""}
+                        readOnly
+                        className="h-10 font-mono text-xs text-zinc-500 bg-zinc-950/90 border-zinc-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={savingProfile}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium"
+                    >
+                      {savingProfile ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save Changes</span>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Change Password Card */}
+            <Card className="border-zinc-800 bg-zinc-900/60 shadow-md">
+              <CardHeader className="p-5 pb-3 border-b border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-purple-400" />
+                  <CardTitle className="text-sm font-semibold text-white">
+                    Change Password
+                  </CardTitle>
+                </div>
+                <CardDescription>
+                  Update your authentication credentials. Minimum 8 characters required.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-4">
+                {passwordSuccess && (
+                  <Alert className="py-2.5 bg-emerald-950/40 border-emerald-900/60 text-xs text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <AlertDescription>Password updated successfully.</AlertDescription>
+                  </Alert>
+                )}
+
+                {passwordError && (
+                  <Alert variant="destructive" className="py-2.5 bg-red-950/40 border-red-900/60 text-xs">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{passwordError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Current Password
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="h-10 bg-zinc-950/90 border-zinc-800 text-xs text-zinc-200 font-mono"
+                      disabled={changingPassword}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      New Password
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="At least 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="h-10 bg-zinc-950/90 border-zinc-800 text-xs text-zinc-200 font-mono"
+                      disabled={changingPassword}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={changingPassword}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 text-xs font-medium"
+                  >
+                    {changingPassword ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                        <span>Updating Password...</span>
+                      </>
+                    ) : (
+                      <span>Update Password</span>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Section 1: Backend Connection */}
           <TabsContent value="connection" className="space-y-4">

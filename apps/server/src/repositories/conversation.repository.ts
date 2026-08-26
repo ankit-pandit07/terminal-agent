@@ -18,24 +18,26 @@ function createConversationTitle(message: string) {
 }
 
 export class ConversationRepository {
-  async create(message: string) {
+  async create(message: string, userId?: string) {
     return prisma.conversation.create({
       data: {
         title: createConversationTitle(message),
+        userId: userId ?? null,
       },
     });
   }
 
-  async findAll() {
+  async findAll(userId?: string) {
     return prisma.conversation.findMany({
+      where: userId ? { userId } : {},
       orderBy: {
         updatedAt: "desc",
       },
     });
   }
 
-  async findById(id: string) {
-    return prisma.conversation.findUnique({
+  async findById(id: string, userId?: string) {
+    const conversation = await prisma.conversation.findUnique({
       where: {
         id,
       },
@@ -52,9 +54,25 @@ export class ConversationRepository {
         },
       },
     });
+
+    if (!conversation) return null;
+
+    // Enforce ownership if userId is specified
+    if (userId && conversation.userId && conversation.userId !== userId) {
+      return null;
+    }
+
+    return conversation;
   }
 
-  async delete(id: string) {
+  async delete(id: string, userId?: string) {
+    if (userId) {
+      const conv = await prisma.conversation.findUnique({ where: { id } });
+      if (!conv || (conv.userId && conv.userId !== userId)) {
+        throw new Error("Conversation not found or unauthorized");
+      }
+    }
+
     return prisma.conversation.delete({
       where: {
         id,
@@ -62,8 +80,9 @@ export class ConversationRepository {
     });
   }
 
-  async findRecent(limit = 10) {
+  async findRecent(limit = 10, userId?: string) {
     return prisma.conversation.findMany({
+      where: userId ? { userId } : {},
       take: limit,
       orderBy: {
         createdAt: "desc",

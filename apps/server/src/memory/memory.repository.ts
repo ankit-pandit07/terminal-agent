@@ -9,6 +9,7 @@ export class MemoryRepository {
   async create(input: CreateMemoryInput) {
     return prisma.agentMemory.create({
       data: {
+        userId: input.userId ?? null,
         conversationId: input.conversationId ?? null,
         executionId: input.executionId ?? null,
         type: input.type,
@@ -28,6 +29,10 @@ export class MemoryRepository {
 
   async search(options: MemorySearchOptions): Promise<MemoryRecord[]> {
     const where: any = {};
+
+    if (options.userId) {
+      where.userId = options.userId;
+    }
 
     if (options.conversationId) {
       where.conversationId = options.conversationId;
@@ -71,6 +76,7 @@ export class MemoryRepository {
 
     return memories.map((memory) => ({
       id: memory.id,
+      userId: memory.userId,
       conversationId: memory.conversationId,
       executionId: memory.executionId,
       type: memory.type as MemoryRecord["type"],
@@ -80,8 +86,9 @@ export class MemoryRepository {
     }));
   }
 
-  async findRecent(limit = 20) {
+  async findRecent(limit = 20, userId?: string) {
     return prisma.agentMemory.findMany({
+      where: userId ? { userId } : {},
       take: limit,
       orderBy: {
         createdAt: "desc",

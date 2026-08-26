@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { AgentService } from "../agent/agent.service.js";
 import { AgentEventEmitter } from "../events/agent-event-emitter.js";
-import { success, z } from "zod";
+import { z } from "zod";
 import type { Plan } from "../planner/planner.js";
-import type { ToolCategory, ToolInput } from "../tools/base/tool.interface.js";
-import { history } from "../conversation/conversation.controller.js";
+import type { ToolInput } from "../tools/base/tool.interface.js";
+import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
+
+// Apply requireAuth middleware to protect all chat and agent operations
+router.use(requireAuth);
 
 const agent = new AgentService();
 
@@ -15,7 +18,7 @@ const chatSchema = z.object({
     .string()
     .trim()
     .min(1, "Message is required.")
-    .max(5000, "Message is to long."),
+    .max(5000, "Message is too long."),
   conversationId: z.string().optional(),
 });
 
@@ -32,6 +35,10 @@ const executeSchema = z.object({
   }),
 });
 
+function paramStr(val: string | string[] | undefined): string {
+  return Array.isArray(val) ? val[0] ?? "" : (val ?? "");
+}
+
 router.post("/", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
@@ -39,6 +46,7 @@ router.post("/", async (req, res, next) => {
     const result = await agent.process({
       message: body.message,
       ...(body.conversationId ? { conversationId: body.conversationId } : {}),
+      userId: req.user?.id,
     });
     res.json(result);
   } catch (error) {
@@ -46,27 +54,34 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-router.post("/confirm/:confirmationId",async(req,res,next)=>{
+router.post("/confirm/:confirmationId", async (req, res, next) => {
   try {
-    const result=await agent.confirmExecution(req.params.confirmationId);
+    const result = await agent.confirmExecution(
+      paramStr(req.params.confirmationId),
+      undefined,
+      req.user?.id
+    );
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.post("/cancel/:confirmationId", async(req,res,next)=>{
+router.post("/cancel/:confirmationId", async (req, res, next) => {
   try {
-    const result=agent.cancelConfirmation(req.params.confirmationId);
+    const result = agent.cancelConfirmation(
+      paramStr(req.params.confirmationId),
+      req.user?.id
+    );
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.get("/conversations", async (_, res, next) => {
+router.get("/conversations", async (req, res, next) => {
   try {
-    const history = await agent.getHistory();
+    const history = await agent.getHistory(req.user?.id);
     res.json(history);
   } catch (error) {
     next(error);
@@ -75,15 +90,16 @@ router.get("/conversations", async (_, res, next) => {
 
 router.delete("/conversations/:id", async (req, res, next) => {
   try {
-    const result = await agent.deleteConversation(req.params.id);
+    const result = await agent.deleteConversation(paramStr(req.params.id), req.user?.id);
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
+
 router.get("/conversations/:id", async (req, res, next) => {
   try {
-    const conversation = await agent.getConversation(req.params.id);
+    const conversation = await agent.getConversation(paramStr(req.params.id), req.user?.id);
     res.json(conversation);
   } catch (error) {
     next(error);
@@ -92,7 +108,7 @@ router.get("/conversations/:id", async (req, res, next) => {
 
 router.get("/executions/detail/:id", async (req, res, next) => {
   try {
-    const execution = await agent.getExecution(req.params.id);
+    const execution = await agent.getExecution(paramStr(req.params.id), req.user?.id);
     res.json(execution);
   } catch (error) {
     next(error);
@@ -101,8 +117,7 @@ router.get("/executions/detail/:id", async (req, res, next) => {
 
 router.get("/executions/:conversationId", async (req, res, next) => {
   try {
-    const executions = await agent.getExecutions(req.params.conversationId);
-
+    const executions = await agent.getExecutions(paramStr(req.params.conversationId), req.user?.id);
     res.json(executions);
   } catch (error) {
     next(error);
@@ -134,9 +149,9 @@ router.get("/workspace", async (_, res, next) => {
   }
 });
 
-router.get("/memory", async (_, res, next) => {
+router.get("/memory", async (req, res, next) => {
   try {
-    const memory = await agent.getMemoryHistory();
+    const memory = await agent.getMemoryHistory(req.user?.id);
 
     res.json({
       success: true,
@@ -149,7 +164,7 @@ router.get("/memory", async (_, res, next) => {
 
 router.get("/memory/conversation/:conversationId", async (req, res, next) => {
   try {
-    const memory = await agent.getConversationMemory(req.params.conversationId);
+    const memory = await agent.getConversationMemory(paramStr(req.params.conversationId), req.user?.id);
     res.json({
       success: true,
       memory,
@@ -180,13 +195,12 @@ router.post("/execute", async (req, res, next) => {
       steps: body.plan.steps.map((step) => ({
         tool: step.tool,
         input: step.input as ToolInput,
-
         ...(step.reason !== undefined ? { reason: step.reason } : {}),
         ...(step.priority !== undefined ? { priority: step.priority } : {}),
       })),
     };
 
-    const result = await agent.executePlan(plan);
+    const result = await agent.executePlan(plan, undefined, req.user?.id);
 
     res.json({
       success: true,
@@ -196,6 +210,7 @@ router.post("/execute", async (req, res, next) => {
     next(error);
   }
 });
+
 router.post("/stream", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
@@ -215,6 +230,7 @@ router.post("/stream", async (req, res, next) => {
       {
         message: body.message,
         ...(body.conversationId ? { conversationId: body.conversationId } : {}),
+        userId: req.user?.id,
       },
       emitter,
     );
@@ -232,11 +248,14 @@ router.post("/stream", async (req, res, next) => {
   }
 });
 
-router.get("/history", async (_req, res, next) => {
+router.get("/history", async (req, res, next) => {
   try {
-    const result = await history();
+    const conversations = await agent.getHistory(req.user?.id);
 
-    res.json(result);
+    res.json({
+      success: true,
+      history: conversations,
+    });
   } catch (error) {
     next(error);
   }

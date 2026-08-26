@@ -1,15 +1,16 @@
 import { MemoryRepository } from "./memory.repository.js";
 
 export class MemoryService {
-
   private repository = new MemoryRepository();
 
   async saveConversation(
     conversationId: string,
     key: string,
     value: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       conversationId,
       type: "conversation",
       key,
@@ -21,8 +22,10 @@ export class MemoryService {
     executionId: string,
     key: string,
     value: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       executionId,
       type: "execution",
       key,
@@ -34,8 +37,10 @@ export class MemoryService {
     executionId: string,
     tool: string,
     output: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       executionId,
       type: "tool",
       key: tool,
@@ -47,8 +52,10 @@ export class MemoryService {
     executionId: string,
     path: string,
     patch: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       executionId,
       type: "patch",
       key: path,
@@ -59,8 +66,10 @@ export class MemoryService {
   async saveRollback(
     executionId: string,
     path: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       executionId,
       type: "rollback",
       key: path,
@@ -71,16 +80,18 @@ export class MemoryService {
   async saveWorkspace(
     key: string,
     value: string,
+    userId?: string
   ) {
     return this.repository.create({
+      userId,
       type: "workspace",
       key,
       value,
     });
   }
 
-  async history() {
-    return this.repository.findRecent();
+  async history(userId?: string) {
+    return this.repository.findRecent(20, userId);
   }
 
   async search(options: any) {
@@ -96,10 +107,12 @@ export class MemoryService {
   }
 
   async getByConversation(
-    conversationId:string,
-  ){
+    conversationId: string,
+    userId?: string
+  ) {
     return this.repository.search({
       conversationId,
-    })
+      userId,
+    });
   }
 }

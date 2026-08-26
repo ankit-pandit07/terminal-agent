@@ -9,9 +9,11 @@ export class ConfirmationService {
     conversationId: string,
     plan: Plan,
     message: string,
+    userId?: string
   ): PendingConfirmation {
     const confirmation: PendingConfirmation = {
       id: crypto.randomUUID(),
+      userId,
       executionId,
       conversationId,
       plan,
@@ -29,13 +31,17 @@ export class ConfirmationService {
   }
 
   remove(id: string): boolean {
-  return this.pending.delete(id);
-}
+    return this.pending.delete(id);
+  }
 
-  confirm(id: string): PendingConfirmation | undefined {
+  confirm(id: string, userId?: string): PendingConfirmation | undefined {
     const confirmation = this.pending.get(id);
 
     if (!confirmation) {
+      return undefined;
+    }
+
+    if (userId && confirmation.userId && confirmation.userId !== userId) {
       return undefined;
     }
 
@@ -43,7 +49,14 @@ export class ConfirmationService {
     return confirmation;
   }
 
-  cancel(id: string): boolean {
+  cancel(id: string, userId?: string): boolean {
+    const confirmation = this.pending.get(id);
+    if (!confirmation) return false;
+
+    if (userId && confirmation.userId && confirmation.userId !== userId) {
+      return false;
+    }
+
     return this.pending.delete(id);
   }
 }
