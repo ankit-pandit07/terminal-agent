@@ -58,11 +58,30 @@ export function Inspector({ isOpen, onToggle }: InspectorProps) {
 
         <div className="flex items-center gap-1.5">
           <Badge
-            variant={loading ? "warning" : "default"}
-            className="text-[10px] font-mono"
+            variant={loading ? "default" : "outline"}
+            className={cn(
+              "text-[10px] font-mono gap-1",
+              loading
+                ? "bg-blue-600/20 text-blue-300 border-blue-500/30 animate-pulse"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400"
+            )}
           >
-            {events.length} frames
+            {loading && <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />}
+            <span>{events.length} frames</span>
           </Badge>
+
+          {events.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => useChatStore.getState().clearEvents()}
+              className="h-6 px-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+              title="Clear telemetry frames"
+            >
+              Clear
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="icon-sm"

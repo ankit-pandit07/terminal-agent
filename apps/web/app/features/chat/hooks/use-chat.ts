@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useChatStore } from "../store/chat.store";
 import { useConversationStore } from "../store/conversation.store";
 import { getConversation } from "../api/conversation.api";
@@ -13,6 +14,7 @@ export interface RecoveryEvent {
 }
 
 export function useChat() {
+  const router = useRouter();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loading = useChatStore((s) => s.loading);
@@ -53,13 +55,21 @@ export function useChat() {
 
     addUserMessage(message);
 
-    // If already in an active conversation, update its timestamp in sidebar
+    // Record the user request as frame #1 for Telemetry Inspector
+    addEvent({
+      type: "user-request",
+      message,
+      conversationId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // If already in an active conversation, bump its timestamp in sidebar
     if (conversationId) {
       updateConversationTimestamp(conversationId);
     }
 
     try {
-      let finalHandled = false;
+      let finalMessageAdded = false;
 
       await streamChat(
         {
@@ -67,6 +77,7 @@ export function useChat() {
           ...(conversationId ? { conversationId } : {}),
         },
         async (event) => {
+          // Forward every received SSE event to the chat store for Inspector telemetry
           addEvent(event);
 
           // Recovery event
@@ -99,9 +110,6 @@ export function useChat() {
 
           // Handle final completion events: "completed" or "done"
           if (event.type === "completed" || event.type === "done") {
-            if (finalHandled && event.type === "done") return;
-            finalHandled = true;
-
             const responseText =
               typeof event.response === "string"
                 ? event.response
@@ -109,7 +117,8 @@ export function useChat() {
                   ? event.output
                   : "";
 
-            if (responseText) {
+            if (responseText && !finalMessageAdded) {
+              finalMessageAdded = true;
               addAssistantMessage(responseText);
             }
 
@@ -123,13 +132,15 @@ export function useChat() {
 
               try {
                 const freshConv = await getConversation(activeConvId);
-                addConversation(freshConv);
-                selectConversation(freshConv.id);
+                if (freshConv && freshConv.id === activeConvId) {
+                  addConversation(freshConv);
+                  selectConversation(freshConv.id);
+                }
               } catch (err) {
-                console.error("Failed to refresh conversation history:", err);
+                console.error("Failed to refresh conversation in history:", err);
               }
 
-              // Update URL without causing page remount
+              // Synchronize URL in browser without full page reload
               if (typeof window !== "undefined") {
                 const targetUrl = `/chat?conversation=${activeConvId}`;
                 if (window.location.search !== `?conversation=${activeConvId}`) {
@@ -148,13 +159,23 @@ export function useChat() {
       ) {
         console.log("Chat stream cancelled by user.");
         addAssistantMessage("*Generation was cancelled.*");
+        addEvent({
+          type: "cancelled",
+          message: "Generation was cancelled by user.",
+        });
         return;
       }
 
       console.error("Chat stream failed:", error);
+      const errMsg =
+        error instanceof Error ? error.message : "Chat stream failed.";
       addAssistantMessage(
         "Sorry, something went wrong while processing your request. Please try again."
       );
+      addEvent({
+        type: "error",
+        error: errMsg,
+      });
     } finally {
       abortControllerRef.current = null;
       setLoading(false);

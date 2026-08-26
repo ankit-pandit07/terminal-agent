@@ -17,6 +17,7 @@ interface ChatStore {
   events: StreamEvent[];
   addEvent: (event: StreamEvent) => void;
   setEvents: (events: StreamEvent[]) => void;
+  clearEvents: () => void;
 
   loading: boolean;
   setLoading: (loading: boolean) => void;
@@ -76,6 +77,11 @@ export const useChatStore = create<ChatStore>((set) => ({
   setEvents: (events) =>
     set({
       events,
+    }),
+
+  clearEvents: () =>
+    set({
+      events: [],
     }),
 
   loading: false,
