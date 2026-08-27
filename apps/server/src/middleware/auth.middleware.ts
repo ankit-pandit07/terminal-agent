@@ -85,6 +85,14 @@ export async function requireAuth(
     const token = extractSessionToken(req);
 
     if (!token) {
+      const hasCookie = Boolean(
+        req.cookies && (req.cookies[AUTH_COOKIE_NAME] || req.cookies["session_token"])
+      );
+      const hasBearer = Boolean(req.headers.authorization?.startsWith("Bearer "));
+      console.warn(
+        `[AUTH 401] Missing session token on ${req.method} ${req.originalUrl || req.url} | CookiePresent: ${hasCookie} | BearerPresent: ${hasBearer} | Origin: ${req.headers.origin || "none"}`
+      );
+
       res.status(401).json({
         success: false,
         message: "Unauthorized. Authentication session required.",
@@ -95,6 +103,9 @@ export async function requireAuth(
     const validated = await sessionService.validateSession(token);
 
     if (!validated) {
+      console.warn(
+        `[AUTH 401] Session token invalid/expired on ${req.method} ${req.originalUrl || req.url}`
+      );
       clearAuthCookie(res);
       res.status(401).json({
         success: false,

@@ -16,6 +16,7 @@ import {
   setAuthCookie,
   clearAuthCookie,
   extractSessionToken,
+  AUTH_COOKIE_NAME,
 } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -303,6 +304,29 @@ router.post("/change-password", requireAuth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// GET /auth/debug (Safe production diagnostic endpoint)
+router.get("/debug", async (req, res) => {
+  const hasCookie = Boolean(
+    req.cookies && (req.cookies[AUTH_COOKIE_NAME] || req.cookies["session_token"])
+  );
+  const token = extractSessionToken(req);
+  let sessionFound = false;
+  let hasUser = false;
+
+  if (token) {
+    const validated = await sessionService.validateSession(token);
+    if (validated) {
+      sessionFound = true;
+      hasUser = Boolean(validated.user);
+    }
+  }
+
+  return res.json({
+    hasSessionCookie: hasCookie,
+    authenticated: sessionFound && hasUser,
+  });
 });
 
 export default router;

@@ -52,11 +52,24 @@ const corsOptions: cors.CorsOptions = {
 
     const cleanOrigin = origin.replace(/\/+$/, "");
 
-    if (
-      allowedOrigins.includes(cleanOrigin) ||
-      env.NODE_ENV !== "production"
-    ) {
+    // 1. Check exact matches in configured and default allowed origins
+    if (allowedOrigins.includes(cleanOrigin)) {
       return callback(null, true);
+    }
+
+    // 2. Allow any origin in non-production environments
+    if (env.NODE_ENV !== "production") {
+      return callback(null, true);
+    }
+
+    // 3. Allow Vercel preview and production deployments (*.vercel.app)
+    try {
+      const url = new URL(cleanOrigin);
+      if (url.hostname.endsWith(".vercel.app") && url.protocol === "https:") {
+        return callback(null, true);
+      }
+    } catch {
+      // ignore parse error
     }
 
     return callback(null, false);

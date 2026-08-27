@@ -26,8 +26,8 @@ export function useConversations() {
   const authLoading = useAuthStore((s) => s.loading);
 
   const refresh = useCallback(async () => {
-    // Only fetch if authenticated or auth check is finished
-    if (authLoading) return;
+    // Only fetch if authenticated and not loading auth state
+    if (authLoading || !authenticated) return;
 
     setLoading(true);
     setError(null);
@@ -45,7 +45,7 @@ export function useConversations() {
     } finally {
       setLoading(false);
     }
-  }, [authLoading, setConversations, setLoading, setError]);
+  }, [authLoading, authenticated, setConversations, setLoading, setError]);
 
   const openConversation = useCallback(
     async (id: string) => {
