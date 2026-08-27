@@ -55,6 +55,7 @@ export function setAuthCookie(res: Response, token: string): void {
     sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    partitioned: isProduction,
   });
 }
 

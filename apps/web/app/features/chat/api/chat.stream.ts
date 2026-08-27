@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from "@/lib/api";
+
 export interface StreamEvent {
   type: string;
   conversationId?: string;
@@ -9,15 +11,12 @@ interface StreamInput {
   conversationId?: string;
 }
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5000";
-const API_URL = rawApiUrl.replace(/\/+$/, "");
-
 export async function streamChat(
   input: StreamInput,
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal,
 ) {
-  const url = `${API_URL}/chat/stream`;
+  const url = `${resolveApiBaseUrl()}/chat/stream`;
 
   const response = await fetch(url, {
     method: "POST",

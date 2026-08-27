@@ -1,10 +1,24 @@
 import axios from "axios";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:5000";
-const API_URL = rawApiUrl.replace(/\/+$/, "");
+export function resolveApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+  // In production browser, use same-origin proxy /api/backend to ensure 100% first-party cookie delivery across all browsers
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
+    if (!envUrl || envUrl.startsWith("/") || envUrl === "https://terminal-agent.onrender.com") {
+      return "/api/backend";
+    }
+  }
+
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:5000";
+}
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
