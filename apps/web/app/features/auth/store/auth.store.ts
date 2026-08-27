@@ -33,7 +33,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
 
   checkAuth: async () => {
-    set({ loading: true });
+    const isCurrentlyAuth = get().authenticated;
+    if (!isCurrentlyAuth) {
+      set({ loading: true });
+    }
     try {
       const data = await authApi.getMe();
       if (data.success && data.user) {
@@ -53,15 +56,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       useConversationStore.getState().reset();
       useChatStore.getState().clear();
       return false;
-    } catch {
-      set({
-        user: null,
-        authenticated: false,
-        loading: false,
-      });
-      useConversationStore.getState().reset();
-      useChatStore.getState().clear();
-      return false;
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403 || !isCurrentlyAuth) {
+        set({
+          user: null,
+          authenticated: false,
+          loading: false,
+        });
+        useConversationStore.getState().reset();
+        useChatStore.getState().clear();
+        return false;
+      }
+      set({ loading: false });
+      return isCurrentlyAuth;
     }
   },
 

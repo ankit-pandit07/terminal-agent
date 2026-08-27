@@ -39,11 +39,15 @@ export function extractSessionToken(req: Request): string | null {
   return null;
 }
 
+function checkIsProduction(): boolean {
+  return process.env.NODE_ENV === "production" || env.NODE_ENV === "production";
+}
+
 /**
  * Sets secure HTTP-only authentication session cookie on the response.
  */
 export function setAuthCookie(res: Response, token: string): void {
-  const isProduction = env.NODE_ENV === "production";
+  const isProduction = checkIsProduction();
 
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
@@ -58,7 +62,7 @@ export function setAuthCookie(res: Response, token: string): void {
  * Clears the authentication session cookie.
  */
 export function clearAuthCookie(res: Response): void {
-  const isProduction = env.NODE_ENV === "production";
+  const isProduction = checkIsProduction();
 
   res.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
