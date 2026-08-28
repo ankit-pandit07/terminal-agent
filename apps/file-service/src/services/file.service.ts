@@ -5,6 +5,7 @@ import { ALLOWED_MIME_TYPES } from "../types/file.types.js";
 import type { ParsedFile, UploadedFile } from "../types/file.types.js";
 import type { StorageService } from "../storage/storage.interface.js";
 import { ParserService } from "../parsers/parser.service.js";
+import { FileRepository } from "../repositories/file.repository.js";
 
 export interface ProcessedFile {
   id: string;
@@ -19,6 +20,7 @@ export class FileService {
   constructor(
     private readonly storage: StorageService,
     private readonly parserService: ParserService,
+    private readonly fileRepository: FileRepository,
   ) {}
 
   async processUpload(file: UploadedFile): Promise<ProcessedFile> {
@@ -34,12 +36,25 @@ export class FileService {
     try {
       const parsed = await this.parserService.parse(file);
 
-      return {
-        id,
+      const extractedText =
+        typeof parsed.text === "string" ? parsed.text : undefined;
+
+      const databaseFile = await this.fileRepository.create({
+        userId: "system",
         originalName: file.originalName,
         mimeType: file.mimeType,
         size: file.size,
         storageKey,
+        status: "READY",
+        extractedText,
+      });
+
+      return {
+        id: databaseFile.id,
+        originalName: databaseFile.originalName,
+        mimeType: databaseFile.mimeType,
+        size: databaseFile.size,
+        storageKey: databaseFile.storageKey,
         parsed,
       };
     } catch (error) {
