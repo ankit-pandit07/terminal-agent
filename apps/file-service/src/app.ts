@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
+import healthRouter from "./routes/health.route.js";
 
 const app = express();
 
@@ -16,11 +17,6 @@ app.use(
 
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "file-service",
-  });
-});
+app.use("/health", healthRouter);
 
 export default app;
