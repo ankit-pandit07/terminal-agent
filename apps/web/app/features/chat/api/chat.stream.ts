@@ -9,6 +9,7 @@ export interface StreamEvent {
 interface StreamInput {
   message: string;
   conversationId?: string;
+  fileIds?: string[];
 }
 
 export async function streamChat(

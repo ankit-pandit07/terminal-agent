@@ -3,6 +3,7 @@ import { api } from "../../../../lib/api";
 export interface ChatRequest {
   message: string;
   conversationId?: string;
+  fileIds?: string[];
 }
 
 export async function sendMessage(body: ChatRequest) {

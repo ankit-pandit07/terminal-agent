@@ -22,8 +22,9 @@ export async function requireAuth(
 ): Promise<void> {
   try {
     const authorization = req.headers.authorization;
+    const cookie = req.headers.cookie;
 
-    if (!authorization?.startsWith("Bearer ")) {
+    if (!authorization?.startsWith("Bearer ") && !cookie) {
       res.status(401).json({
         success: false,
         message: "Authentication required.",
@@ -31,12 +32,19 @@ export async function requireAuth(
       return;
     }
 
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+    if (authorization) {
+      headers["Authorization"] = authorization;
+    }
+    if (cookie) {
+      headers["Cookie"] = cookie;
+    }
+
     const response = await fetch(`${AUTH_SERVER_URL}/auth/me`, {
       method: "GET",
-      headers: {
-        Authorization: authorization,
-        Accept: "application/json",
-      },
+      headers,
     });
 
     if (!response.ok) {

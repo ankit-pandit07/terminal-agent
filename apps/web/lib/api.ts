@@ -17,6 +17,16 @@ export function resolveApiBaseUrl(): string {
   return "http://localhost:5000";
 }
 
+export function resolveFileServiceBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_FILE_SERVICE_URL?.trim();
+
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:5001";
+}
+
 export const api = axios.create({
   baseURL: resolveApiBaseUrl(),
   withCredentials: true,

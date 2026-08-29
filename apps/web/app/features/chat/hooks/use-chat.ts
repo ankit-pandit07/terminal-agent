@@ -44,7 +44,7 @@ export function useChat() {
     }
   }
 
-  async function stream(message: string) {
+  async function stream(message: string, fileIds?: string[]) {
     if (loading || !message.trim()) return;
 
     const controller = new AbortController();
@@ -60,6 +60,7 @@ export function useChat() {
       type: "user-request",
       message,
       conversationId,
+      fileIds,
       timestamp: new Date().toISOString(),
     });
 
@@ -75,6 +76,7 @@ export function useChat() {
         {
           message,
           ...(conversationId ? { conversationId } : {}),
+          ...(fileIds && fileIds.length > 0 ? { fileIds } : {}),
         },
         async (event) => {
           // Forward every received SSE event to the chat store for Inspector telemetry
