@@ -178,24 +178,27 @@ ${Object.entries(workspace.scripts)
   async createPlan(
     message: string,
     history: string,
-     memoryContext: string,
+    memoryContext: string,
     workspace: WorkspaceInfo,
     retrievedContext: RetrievedContext,
     sessionContext: string,
     observation?: Observation,
     reflection?: Reflection,
+    attachedFilesContext?: string,
   ): Promise<Plan> {
-    const rulePlan = this.rulePlanner.createPlan(message);
-
-    if (rulePlan) {
-      rulePlan.source = "rule";
-      return rulePlan;
-    }
-    const decision = this.decisionEngine.analyze(message);
-    if (!decision.useLLM) {
+    if (!attachedFilesContext) {
       const rulePlan = this.rulePlanner.createPlan(message);
+
       if (rulePlan) {
+        rulePlan.source = "rule";
         return rulePlan;
+      }
+      const decision = this.decisionEngine.analyze(message);
+      if (!decision.useLLM) {
+        const rulePlan = this.rulePlanner.createPlan(message);
+        if (rulePlan) {
+          return rulePlan;
+        }
       }
     }
     const projectContext = this.buildProjectContext(workspace);
@@ -221,6 +224,7 @@ ${Object.entries(workspace.scripts)
       reflection,
       retrievedContext,
       relatedFiles,
+      attachedFilesContext,
     );
     const response = await this.llm.generate({
       prompt,

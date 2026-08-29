@@ -133,7 +133,7 @@ export class FileServiceClient {
     authToken: string,
   ): Promise<UploadFileResultDto> {
     const formData = new FormData();
-    const blob = new Blob([file.buffer], { type: file.mimeType });
+    const blob = new Blob([new Uint8Array(file.buffer)], { type: file.mimeType });
     formData.append("file", blob, file.originalName);
 
     const response = await fetch(`${this.baseUrl}/files/upload`, {

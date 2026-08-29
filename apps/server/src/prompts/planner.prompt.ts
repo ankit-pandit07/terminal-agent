@@ -47,7 +47,7 @@ ${observation.facts.join("\n")}
 
 export function buildPlannerPrompt(
   history: string,
-  memoryContext:string,
+  memoryContext: string,
   message: string,
   observation: Observation | undefined,
   projectContext: string,
@@ -60,6 +60,7 @@ export function buildPlannerPrompt(
   reflection?: Reflection,
   retrievedContext?: RetrievedContext,
   relatedFiles?: FileTask[],
+  attachedFilesContext?: string,
 ): string {
  
   const tools = toolDefinitions
@@ -607,8 +608,16 @@ Before generating the plan:
 - Read the Conversation Context.
 - Resolve all references ("it", "that", "there", etc.).
 - Determine whether the user is referring to an existing file, folder, or previous action.
+- If attached files are present, use their contents as reference data to fulfill the user's request.
 - Only then create the execution plan.
-
+${
+  attachedFilesContext
+    ? `
+Attached Files (Reference Data):
+${attachedFilesContext}
+`
+    : ""
+}
 Current User Message:
 ${message}
 `;

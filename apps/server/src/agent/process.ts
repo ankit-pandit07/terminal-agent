@@ -23,7 +23,7 @@ import { buildMemoryContext } from "../memory/memory-context.js";
 import { SafetyService } from "../executor/safety.service.js";
 import { confirmationService } from "../executor/confirmation.instance.js";
 import { RecoveryService } from "../recovery/recovery.service.js";
-import { fileServiceClient } from "../files/file-service.client.js";
+import { hydrateAttachedFiles } from "../files/file-context.builder.js";
 // Services - Initialized once and shared
 
 const conversationRepository = new ConversationRepository();
@@ -80,14 +80,17 @@ export async function processAgentRequest(
       request.userId
     );
 
-    // Process attached files if provided
+    // Hydrate attached files if provided in the current request
+    let attachedFilesContext = "";
     if (request.fileIds && request.fileIds.length > 0 && request.authToken) {
-      for (const fileId of request.fileIds) {
+      const hydrated = await hydrateAttachedFiles(
+        request.fileIds,
+        request.authToken,
+      );
+      attachedFilesContext = hydrated.context;
+
+      for (const fileMeta of hydrated.files) {
         try {
-          const fileMeta = await fileServiceClient.getFileMetadata(
-            fileId,
-            request.authToken,
-          );
           await memoryService.saveConversation(
             conversation.id,
             "file-attachment",
@@ -113,11 +116,8 @@ export async function processAgentRequest(
               request.userId,
             );
           }
-        } catch (fileErr) {
-          console.warn(
-            `Could not load attached file ${fileId} from File Service:`,
-            fileErr,
-          );
+        } catch (memErr) {
+          console.warn("Could not save file to memory:", memErr);
         }
       }
     }
@@ -171,6 +171,7 @@ ${executionHistory}
         sessionContext,
         lastObservation,
         lastReflection,
+        attachedFilesContext,
       );
 
       emit(emitter, {
