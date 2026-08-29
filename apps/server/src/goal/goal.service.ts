@@ -28,6 +28,7 @@ export class GoalService {
 
     const response = await this.llm.generate({
       prompt,
+      format: "json",
     });
 
     try {

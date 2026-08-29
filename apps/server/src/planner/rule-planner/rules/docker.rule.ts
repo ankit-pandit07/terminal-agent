@@ -25,17 +25,30 @@ export class DockerRule implements PlanningRule {
   }
 
   execute(context: RuleContext): RuleResult {
+    const text = context.message.trim();
+    const lower = text.toLowerCase();
+
+    let command = text;
+
+    if (lower.startsWith("docker ") || lower.startsWith("docker compose ")) {
+      command = text;
+    } else {
+      const dockerIdx = lower.indexOf("docker ");
+      if (dockerIdx !== -1) {
+        command = text.substring(dockerIdx).trim();
+      }
+    }
+
     return {
       matched: true,
       confidence: 1,
       plan: {
-        source:"rule",
+        source: "rule",
         steps: [
           {
             tool: "terminal",
-
             input: {
-              command: context.message,
+              command,
             },
           },
         ],

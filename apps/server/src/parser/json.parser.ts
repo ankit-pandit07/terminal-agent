@@ -32,7 +32,7 @@ export class JsonParser {
 
         const currentStep = step as Record<string, unknown>;
 
-        if (typeof currentStep.tool !== "string") {
+        if (typeof currentStep.tool !== "string" || !currentStep.tool.trim()) {
           throw new Error(`Step ${index + 1}: Missing or invalid tool.`);
         }
 
@@ -46,6 +46,9 @@ export class JsonParser {
 
       return plan as Plan;
     } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error("Invalid planner output format: Model did not return valid plan JSON.");
+      }
       const message =
         error instanceof Error
           ? error.message

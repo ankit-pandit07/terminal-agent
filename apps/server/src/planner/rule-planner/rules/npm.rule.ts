@@ -18,19 +18,41 @@ export class NpmRule implements PlanningRule {
   }
 
   execute(context: RuleContext): RuleResult {
+    const text = context.message.trim();
+    const lower = text.toLowerCase();
+
+    let command = text;
+
+    if (lower.startsWith("npm ") || lower.startsWith("npx ")) {
+      command = text;
+    } else if (lower.includes("run dev")) {
+      command = "npm run dev";
+    } else if (lower.includes("run build")) {
+      command = "npm run build";
+    } else if (lower.includes("run test")) {
+      command = "npm test";
+    } else if (lower.includes("install package")) {
+      command = "npm install";
+    } else {
+      const npmIdx = lower.indexOf("npm ");
+      const npxIdx = lower.indexOf("npx ");
+      if (npmIdx !== -1) {
+        command = text.substring(npmIdx).trim();
+      } else if (npxIdx !== -1) {
+        command = text.substring(npxIdx).trim();
+      }
+    }
+
     return {
       matched: true,
-
       confidence: 1,
-
       plan: {
-         source: "rule",
+        source: "rule",
         steps: [
           {
             tool: "terminal",
-
             input: {
-              command: context.message,
+              command,
             },
           },
         ],

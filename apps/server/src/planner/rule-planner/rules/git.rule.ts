@@ -20,19 +20,38 @@ export class GitRule implements PlanningRule {
   }
 
   execute(context: RuleContext): RuleResult {
+    const text = context.message.trim();
+    const lower = text.toLowerCase();
+
+    let command = text;
+
+    if (lower.startsWith("git ")) {
+      command = text;
+    } else if (lower.includes("git status")) {
+      command = "git status";
+    } else if (lower.includes("git diff")) {
+      command = "git diff";
+    } else if (lower.includes("git log")) {
+      command = "git log";
+    } else if (lower.includes("git branch")) {
+      command = "git branch";
+    } else {
+      const gitIdx = lower.indexOf("git ");
+      if (gitIdx !== -1) {
+        command = text.substring(gitIdx).trim();
+      }
+    }
+
     return {
       matched: true,
-
       confidence: 1,
-
       plan: {
         source: "rule",
         steps: [
           {
             tool: "terminal",
-
             input: {
-              command: context.message,
+              command,
             },
           },
         ],

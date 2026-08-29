@@ -130,6 +130,13 @@ export class PlanValidator {
 
         break;
       }
+      case "echo": {
+        if (typeof input.message !== "string" || input.message.trim() === "") {
+          throw new Error(`Step ${index + 1}: Echo message is required.`);
+        }
+
+        break;
+      }
       default:
         break;
     }

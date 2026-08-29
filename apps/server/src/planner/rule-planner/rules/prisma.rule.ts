@@ -20,19 +20,33 @@ export class PrismaRule implements PlanningRule {
   }
 
   execute(context: RuleContext): RuleResult {
+    const text = context.message.trim();
+    const lower = text.toLowerCase();
+
+    let command = text;
+
+    if (lower.startsWith("npx prisma ") || lower.startsWith("prisma ")) {
+      command = text;
+    } else {
+      const npxIdx = lower.indexOf("npx prisma ");
+      const prismaIdx = lower.indexOf("prisma ");
+      if (npxIdx !== -1) {
+        command = text.substring(npxIdx).trim();
+      } else if (prismaIdx !== -1) {
+        command = `npx ${text.substring(prismaIdx).trim()}`;
+      }
+    }
+
     return {
       matched: true,
-
       confidence: 1,
-
       plan: {
-        source:"rule",
+        source: "rule",
         steps: [
           {
             tool: "terminal",
-
             input: {
-              command: context.message,
+              command,
             },
           },
         ],

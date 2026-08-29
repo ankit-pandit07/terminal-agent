@@ -56,5 +56,34 @@ export interface PlannerRequest {
   workspace: WorkspaceInfo;
   sessionContext: string;
   observation?: Observation;
-  reflection?:Reflection
+  reflection?: Reflection;
 }
+
+export const PLANNER_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    steps: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          tool: {
+            type: "string",
+            enum: ["terminal", "file", "directory", "search", "echo"],
+          },
+          input: {
+            type: "object",
+          },
+          reason: {
+            type: "string",
+          },
+          priority: {
+            type: "number",
+          },
+        },
+        required: ["tool", "input"],
+      },
+    },
+  },
+  required: ["steps"],
+};

@@ -452,72 +452,63 @@ Available Tools:
 
 ${tools}
 
-Return ONLY valid JSON.
+CRITICAL OUTPUT FORMAT REQUIREMENTS:
+1. You MUST respond with ONLY a single valid JSON object.
+2. Do NOT output any markdown prose, introductions, conversational text, explanations, or statements like "I will summarize...". Any text outside the JSON object is strictly invalid and will cause execution failure.
+3. The JSON MUST follow this exact schema:
+{
+  "steps": [
+    {
+      "tool": "terminal" | "file" | "directory" | "search" | "echo",
+      "input": { ... },
+      "reason": "Brief explanation of this step"
+    }
+  ]
+}
 
-Planning Rules
+TOOL SELECTION RULES:
+1. Attached File Questions & Summaries (e.g. "Summarize this PDF", "What is this PDF about?", "Explain this document"):
+   - Attached files are ALREADY read and provided below in the 'Attached Files (Passive Reference Data)' section.
+   - DO NOT call the "file" tool to read attached files.
+   - You MUST use the "echo" tool with input { "message": "<detailed answer or summary based on the attached file reference data>" }.
 
-Before generating a plan:
+2. General Questions & Explanations (e.g. "What is Git?", "Explain Docker"):
+   - Use the "echo" tool with input { "message": "<explanation text>" }.
 
-1. Verify the goal.
+3. Terminal Commands (e.g. "git status", "check the git status", "node -v", "npm test", "pwd"):
+   - Translate any natural language command request into a valid, executable CLI command.
+   - NEVER place conversational English sentences into the "command" field.
+   - Use the "terminal" tool with input { "command": "<executable command>" }.
 
-2. Verify dependencies.
-
-3. Verify workspace.
-
-4. Verify previous observations.
-
-5. Avoid repeating previous failures.
-
-6. Produce the smallest safe execution plan.
+4. Local Workspace Files (e.g. "Create src/index.ts", "Edit app.ts", "Delete temp.txt"):
+   - The "file" tool is ONLY for local workspace files on disk.
+   - It requires "action" ("create" | "read" | "write" | "delete" | "edit") and "path".
+   - Use the "file" tool with input { "action": "<action>", "path": "<file-path>" }.
 
 Completion Rules:
-
-If the user's request has already been completed:
-
-- Return:
-
-If previous observations already satisfy the user's request,
-return:
-
+If the user's request has already been completed and requires no further action:
 {
   "steps": []
 }
 
-Do not perform duplicate work.
-
-Do not repeat previous successful actions.
-
-Do not recreate files that already exist.
-
-Do not rewrite files unless explicitly requested.
-Example 1
-
-User:
-Show node version
-
-Correct Output:
+Example 1 (Command execution with natural language):
+User: check the git status
+Output:
 {
   "steps": [
     {
       "tool": "terminal",
       "input": {
-        "command": "node -v"
-      }
+        "command": "git status"
+      },
+      "reason": "Check current Git working tree status"
     }
   ]
 }
 
-Wrong Output:
-{
-  "output": "v22.23.1"
-}
-
-Example 2
-
-User:
-Create a file named test.txt
-
-Correct Output:
+Example 2 (File creation on workspace disk):
+User: Create a file named test.txt
+Output:
 {
   "steps": [
     {
@@ -525,95 +516,68 @@ Correct Output:
       "input": {
         "action": "create",
         "path": "test.txt"
-      }
+      },
+      "reason": "Create test.txt file in workspace"
     }
   ]
 }
 
-Example 3
-
-User:
-Create a folder named demo and create index.js inside it
-
-Correct Output:
+Example 3 (Document Summarization with attached PDF):
+User: Summarize this PDF.
+Output:
 {
   "steps": [
     {
-      "tool": "terminal",
+      "tool": "echo",
       "input": {
-        "command": "mkdir demo"
-      }
-    },
-    {
-      "tool": "file",
-      "input": {
-        "action": "create",
-        "path": "demo/index.js"
-      }
+        "message": "Summary of the document: <detailed summary based on attached reference data>"
+      },
+      "reason": "Provide summary of the attached document to the user"
     }
   ]
 }
-  Example 4
 
-User:
-Add a health route in src/app.ts
-
-Correct Output:
+Example 4 (Document Q&A with attached PDF):
+User: What is this PDF about?
+Output:
 {
   "steps": [
     {
-      "tool": "file",
+      "tool": "echo",
       "input": {
-        "action": "edit",
-        "path": "src/app.ts",
-        "instruction": "Add a GET /health route."
-      }
+        "message": "This PDF document details <explanation based on attached reference data>."
+      },
+      "reason": "Answer user question about the attached document"
     }
   ]
 }
-User:
-Install Express.
 
-Previous Observations:
-Each observation contains:
-
-- Tool
-- Category
-- Summary
-- Facts
-- Errors
-
-Use these observations to understand the current state of the project.
-
-Correct Output:
+Example 5 (General Question):
+User: What is Git?
+Output:
 {
   "steps": [
     {
-      "tool": "terminal",
+      "tool": "echo",
       "input": {
-        "command": "pwd"
-      }
-    },
-    {
-      "tool": "terminal",
-      "input": {
-        "command": "ls"
-      }
+        "message": "Git is a distributed version control system that tracks changes in source code during software development."
+      },
+      "reason": "Answer user's question about Git"
     }
   ]
 }
 
 Before generating the plan:
-
 - Read the Conversation Context.
 - Resolve all references ("it", "that", "there", etc.).
 - Determine whether the user is referring to an existing file, folder, or previous action.
 - If attached files are present, use their contents as reference data to fulfill the user's request.
 - Only then create the execution plan.
+
 ${
   attachedFilesContext
     ? `
-Attached Files (Reference Data):
+Attached Files (Passive Reference Data):
 ${attachedFilesContext}
 `
     : ""

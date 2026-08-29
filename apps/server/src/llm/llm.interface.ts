@@ -1,5 +1,7 @@
-export interface LLMRequest{
-    prompt:string;
+export interface LLMRequest {
+  prompt: string;
+  format?: "json" | Record<string, unknown>;
+  system?: string;
 }
 
 export interface LLMResponse{

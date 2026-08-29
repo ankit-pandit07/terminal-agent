@@ -1,11 +1,12 @@
 import { LLMFactory } from "../llm/llm.factory.js";
-import type {
-  DependencyAnalysis,
-  ExecutionStrategy,
-  GoalAnalysis,
-  Plan,
-  PriorityAnalysis,
-  RiskAnalysis,
+import {
+  type DependencyAnalysis,
+  type ExecutionStrategy,
+  type GoalAnalysis,
+  type Plan,
+  type PriorityAnalysis,
+  type RiskAnalysis,
+  PLANNER_JSON_SCHEMA,
 } from "./planner.js";
 import { JsonParser } from "../parser/json.parser.js";
 import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
@@ -226,6 +227,7 @@ ${Object.entries(workspace.scripts)
     );
     const response = await this.llm.generate({
       prompt,
+      format: PLANNER_JSON_SCHEMA,
     });
 
     const plan = this.parser.parse(response.text);
