@@ -4,7 +4,7 @@ import { AgentEventEmitter } from "../events/agent-event-emitter.js";
 import { z } from "zod";
 import type { Plan } from "../planner/planner.js";
 import type { ToolInput } from "../tools/base/tool.interface.js";
-import { requireAuth } from "../middleware/auth.middleware.js";
+import { requireAuth, extractSessionToken } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -20,6 +20,7 @@ const chatSchema = z.object({
     .min(1, "Message is required.")
     .max(5000, "Message is too long."),
   conversationId: z.string().optional(),
+  fileIds: z.array(z.string()).optional(),
 });
 
 const executeSchema = z.object({
@@ -42,11 +43,14 @@ function paramStr(val: string | string[] | undefined): string {
 router.post("/", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
+    const token = extractSessionToken(req);
 
     const result = await agent.process({
       message: body.message,
       ...(body.conversationId ? { conversationId: body.conversationId } : {}),
       userId: req.user?.id,
+      fileIds: body.fileIds,
+      authToken: token ?? undefined,
     });
     res.json(result);
   } catch (error) {
@@ -214,6 +218,7 @@ router.post("/execute", async (req, res, next) => {
 router.post("/stream", async (req, res, next) => {
   try {
     const body = chatSchema.parse(req.body);
+    const token = extractSessionToken(req);
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -231,6 +236,8 @@ router.post("/stream", async (req, res, next) => {
         message: body.message,
         ...(body.conversationId ? { conversationId: body.conversationId } : {}),
         userId: req.user?.id,
+        fileIds: body.fileIds,
+        authToken: token ?? undefined,
       },
       emitter,
     );

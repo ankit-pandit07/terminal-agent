@@ -88,7 +88,7 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options("{/*path}", cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
 app.use(morgan("dev"));

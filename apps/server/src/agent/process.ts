@@ -23,6 +23,7 @@ import { buildMemoryContext } from "../memory/memory-context.js";
 import { SafetyService } from "../executor/safety.service.js";
 import { confirmationService } from "../executor/confirmation.instance.js";
 import { RecoveryService } from "../recovery/recovery.service.js";
+import { fileServiceClient } from "../files/file-service.client.js";
 // Services - Initialized once and shared
 
 const conversationRepository = new ConversationRepository();
@@ -78,6 +79,48 @@ export async function processAgentRequest(
       request.message,
       request.userId
     );
+
+    // Process attached files if provided
+    if (request.fileIds && request.fileIds.length > 0 && request.authToken) {
+      for (const fileId of request.fileIds) {
+        try {
+          const fileMeta = await fileServiceClient.getFileMetadata(
+            fileId,
+            request.authToken,
+          );
+          await memoryService.saveConversation(
+            conversation.id,
+            "file-attachment",
+            JSON.stringify({
+              id: fileMeta.id,
+              originalName: fileMeta.originalName,
+              mimeType: fileMeta.mimeType,
+              size: fileMeta.size,
+              storageKey: fileMeta.storageKey,
+            }),
+            request.userId,
+          );
+
+          if (fileMeta.extractedText) {
+            await memoryService.saveConversation(
+              conversation.id,
+              "file-content",
+              JSON.stringify({
+                fileId: fileMeta.id,
+                originalName: fileMeta.originalName,
+                text: fileMeta.extractedText,
+              }),
+              request.userId,
+            );
+          }
+        } catch (fileErr) {
+          console.warn(
+            `Could not load attached file ${fileId} from File Service:`,
+            fileErr,
+          );
+        }
+      }
+    }
 
     // Create Execution
     execution = await executionRepository.create(

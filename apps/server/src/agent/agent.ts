@@ -4,6 +4,8 @@ export interface AgentRequest {
   message: string;
   conversationId?: string | undefined;
   userId?: string | undefined;
+  fileIds?: string[] | undefined;
+  authToken?: string | undefined;
 }
 
 export interface AgentResponse {

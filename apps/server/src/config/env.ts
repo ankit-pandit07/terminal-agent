@@ -17,4 +17,5 @@ export const env = {
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || "",
   TWILIO_VERIFY_SERVICE_SID: process.env.TWILIO_VERIFY_SERVICE_SID || "",
   SESSION_SECRET: process.env.SESSION_SECRET || "nodebase-default-session-secret",
+  FILE_SERVICE_URL: process.env.FILE_SERVICE_URL || "http://localhost:5001",
 };
