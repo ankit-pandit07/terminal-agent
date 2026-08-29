@@ -50,6 +50,7 @@ yarn-error.log*
 *.pem
 
 apps/server/db/
+apps/file-service/storage/
 
 # Generated Prisma config
 apps/server/prisma.config.js

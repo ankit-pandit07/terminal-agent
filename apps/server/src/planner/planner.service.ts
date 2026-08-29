@@ -186,19 +186,17 @@ ${Object.entries(workspace.scripts)
     reflection?: Reflection,
     attachedFilesContext?: string,
   ): Promise<Plan> {
-    if (!attachedFilesContext) {
-      const rulePlan = this.rulePlanner.createPlan(message);
+    const rulePlan = this.rulePlanner.createPlan(message);
 
+    if (rulePlan) {
+      rulePlan.source = "rule";
+      return rulePlan;
+    }
+    const decision = this.decisionEngine.analyze(message);
+    if (!decision.useLLM) {
+      const rulePlan = this.rulePlanner.createPlan(message);
       if (rulePlan) {
-        rulePlan.source = "rule";
         return rulePlan;
-      }
-      const decision = this.decisionEngine.analyze(message);
-      if (!decision.useLLM) {
-        const rulePlan = this.rulePlanner.createPlan(message);
-        if (rulePlan) {
-          return rulePlan;
-        }
       }
     }
     const projectContext = this.buildProjectContext(workspace);

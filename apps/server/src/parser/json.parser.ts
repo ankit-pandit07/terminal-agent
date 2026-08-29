@@ -3,7 +3,19 @@ import type { Plan } from "../planner/planner.js";
 export class JsonParser {
   parse(text: string): Plan {
     try {
-      const plan = JSON.parse(text);
+      let cleaned = text.trim();
+      const markdownMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (markdownMatch && markdownMatch[1]) {
+        cleaned = markdownMatch[1].trim();
+      } else {
+        const firstBrace = cleaned.indexOf("{");
+        const lastBrace = cleaned.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+        }
+      }
+
+      const plan = JSON.parse(cleaned);
 
       if (typeof plan !== "object" || plan === null) {
         throw new Error("Planner response must be a JSON object.");
