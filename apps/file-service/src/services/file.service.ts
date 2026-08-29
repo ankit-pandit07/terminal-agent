@@ -67,7 +67,16 @@ export class FileService {
     }
   }
 
-  async getFile(storageKey: string): Promise<Buffer> {
+  async getFile(storageKey: string, userId: string): Promise<Buffer> {
+    const file = await this.fileRepository.findByStorageKeyAndUser(
+      storageKey,
+      userId,
+    );
+
+    if (!file) {
+      throw new Error("File not found");
+    }
+
     const exists = await this.storage.exists(storageKey);
 
     if (!exists) {
@@ -77,7 +86,16 @@ export class FileService {
     return this.storage.get(storageKey);
   }
 
-  async deleteFile(storageKey: string): Promise<void> {
+  async deleteFile(storageKey: string, userId: string): Promise<void> {
+    const file = await this.fileRepository.findByStorageKeyAndUser(
+      storageKey,
+      userId,
+    );
+
+    if (!file) {
+      throw new Error("File not found");
+    }
+
     const exists = await this.storage.exists(storageKey);
 
     if (!exists) {
@@ -85,6 +103,12 @@ export class FileService {
     }
 
     await this.storage.delete(storageKey);
+
+    await this.fileRepository.deleteByStorageKeyAndUser(storageKey, userId);
+  }
+
+  async getUserFiles(userId: string) {
+    return this.fileRepository.findByUserId(userId);
   }
 
   private validateFile(file: UploadedFile): void {

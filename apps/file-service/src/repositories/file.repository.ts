@@ -60,4 +60,28 @@ export class FileRepository {
       },
     });
   }
+
+  async findByStorageKeyAndUser(
+  storageKey: string,
+  userId: string,
+) {
+  return prisma.file.findFirst({
+    where: {
+      storageKey,
+      userId,
+    },
+  });
+}
+
+async deleteByStorageKeyAndUser(
+  storageKey: string,
+  userId: string,
+) {
+  return prisma.file.deleteMany({
+    where: {
+      storageKey,
+      userId,
+    },
+  });
+}
 }

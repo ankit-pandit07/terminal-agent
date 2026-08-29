@@ -48,10 +48,7 @@ export class FileController {
         buffer: req.file.buffer,
       };
 
-      const result = await this.fileService.processUpload(
-        file,
-        userId,
-      );
+      const result = await this.fileService.processUpload(file, userId);
 
       res.status(201).json({
         success: true,
@@ -70,8 +67,17 @@ export class FileController {
     try {
       const storageKey = this.getStorageKey(req);
 
-      const file = await this.fileService.getFile(storageKey);
+      const userId = req.user?.id;
 
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const file = await this.fileService.getFile(storageKey, userId);
       res.send(file);
     } catch (error) {
       next(error);
@@ -86,9 +92,45 @@ export class FileController {
     try {
       const storageKey = this.getStorageKey(req);
 
-      await this.fileService.deleteFile(storageKey);
+      const userId = req.user?.id;
 
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      await this.fileService.deleteFile(storageKey, userId);
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  list = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const files = await this.fileService.getUserFiles(userId);
+
+      res.status(200).json({
+        success: true,
+        files,
+      });
     } catch (error) {
       next(error);
     }
