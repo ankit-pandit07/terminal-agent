@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 
 import type { UploadedFile } from "../types/file.types.js";
 import type { FileService } from "../services/file.service.js";
+import { BadRequestError, UnauthorizedError } from "../errors/app.error.js";
 
 export class FileController {
   constructor(private readonly fileService: FileService) {}
@@ -9,11 +10,11 @@ export class FileController {
   private getStorageKey(req: Request): string {
     const { storageKey } = req.params;
 
-    if (typeof storageKey !== "string") {
-      throw new Error("Invalid storage key");
+    if (!storageKey || typeof storageKey !== "string" || !storageKey.trim()) {
+      throw new BadRequestError("Invalid storage key");
     }
 
-    return storageKey;
+    return storageKey.trim();
   }
 
   upload = async (
@@ -22,23 +23,14 @@ export class FileController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      // Get authenticated user
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
+        throw new UnauthorizedError("Authentication required.");
       }
 
       if (!req.file) {
-        res.status(400).json({
-          success: false,
-          error: "File is required",
-        });
-        return;
+        throw new BadRequestError("File is required");
       }
 
       const file: UploadedFile = {
@@ -66,19 +58,21 @@ export class FileController {
   ): Promise<void> => {
     try {
       const storageKey = this.getStorageKey(req);
-
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
+        throw new UnauthorizedError("Authentication required.");
       }
 
       const file = await this.fileService.getFile(storageKey, userId);
-      res.send(file);
+
+      res.setHeader("Content-Type", file.mimeType);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(file.originalName)}"`,
+      );
+      res.setHeader("Content-Length", file.size);
+      res.status(200).send(file.buffer);
     } catch (error) {
       next(error);
     }
@@ -91,19 +85,18 @@ export class FileController {
   ): Promise<void> => {
     try {
       const storageKey = this.getStorageKey(req);
-
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
+        throw new UnauthorizedError("Authentication required.");
       }
 
       await this.fileService.deleteFile(storageKey, userId);
-      res.status(204).send();
+
+      res.status(200).json({
+        success: true,
+        message: "File deleted successfully",
+      });
     } catch (error) {
       next(error);
     }
@@ -118,11 +111,7 @@ export class FileController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
+        throw new UnauthorizedError("Authentication required.");
       }
 
       const files = await this.fileService.getUserFiles(userId);

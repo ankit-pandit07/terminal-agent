@@ -23,23 +23,24 @@ const fileService = new FileService(
 
 const fileController = new FileController(fileService);
 
+// Enforce authentication across all file endpoints
+router.use(requireAuth);
+
 router.post(
   "/upload",
-  requireAuth,
   uploadMiddleware.single("file"),
   fileController.upload,
 );
-router.get("/",requireAuth,fileController.list)
+
+router.get("/", fileController.list);
 
 router.get(
   "/:storageKey",
-  requireAuth,
   fileController.download,
 );
 
 router.delete(
   "/:storageKey",
-  requireAuth,
   fileController.delete,
 );
 

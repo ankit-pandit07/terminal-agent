@@ -6,6 +6,11 @@ import type { ParsedFile, UploadedFile } from "../types/file.types.js";
 import type { StorageService } from "../storage/storage.interface.js";
 import { ParserService } from "../parsers/parser.service.js";
 import { FileRepository } from "../repositories/file.repository.js";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnsupportedMediaTypeError,
+} from "../errors/app.error.js";
 
 export interface ProcessedFile {
   id: string;
@@ -14,6 +19,13 @@ export interface ProcessedFile {
   size: number;
   storageKey: string;
   parsed: ParsedFile;
+}
+
+export interface FileDownloadResult {
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+  size: number;
 }
 
 export class FileService {
@@ -61,29 +73,45 @@ export class FileService {
         parsed,
       };
     } catch (error) {
-      await this.storage.delete(storageKey).catch(() => undefined);
+      // Clean up physical file if parsing or database creation fails
+      await this.storage.delete(storageKey).catch((cleanupErr) => {
+        console.error(
+          `Failed to clean up physical storage for key ${storageKey}:`,
+          cleanupErr,
+        );
+      });
 
       throw error;
     }
   }
 
-  async getFile(storageKey: string, userId: string): Promise<Buffer> {
+  async getFile(
+    storageKey: string,
+    userId: string,
+  ): Promise<FileDownloadResult> {
     const file = await this.fileRepository.findByStorageKeyAndUser(
       storageKey,
       userId,
     );
 
     if (!file) {
-      throw new Error("File not found");
+      throw new NotFoundError("File not found");
     }
 
     const exists = await this.storage.exists(storageKey);
 
     if (!exists) {
-      throw new Error("File not found");
+      throw new NotFoundError("File not found");
     }
 
-    return this.storage.get(storageKey);
+    const buffer = await this.storage.get(storageKey);
+
+    return {
+      buffer,
+      mimeType: file.mimeType,
+      originalName: file.originalName,
+      size: file.size,
+    };
   }
 
   async deleteFile(storageKey: string, userId: string): Promise<void> {
@@ -93,18 +121,32 @@ export class FileService {
     );
 
     if (!file) {
-      throw new Error("File not found");
+      throw new NotFoundError("File not found");
     }
 
     const exists = await this.storage.exists(storageKey);
 
-    if (!exists) {
-      throw new Error("File not found");
+    if (exists) {
+      await this.storage.delete(storageKey);
     }
 
-    await this.storage.delete(storageKey);
+    try {
+      const result = await this.fileRepository.deleteByStorageKeyAndUser(
+        storageKey,
+        userId,
+      );
 
-    await this.fileRepository.deleteByStorageKeyAndUser(storageKey, userId);
+      if (result.count === 0) {
+        throw new NotFoundError("File not found");
+      }
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      console.error(
+        `Database deletion failed for storageKey ${storageKey} after physical removal:`,
+        error,
+      );
+      throw error;
+    }
   }
 
   async getUserFiles(userId: string) {
@@ -112,12 +154,16 @@ export class FileService {
   }
 
   private validateFile(file: UploadedFile): void {
-    if (!file.originalName.trim()) {
-      throw new Error("File name is required");
+    if (
+      !file.originalName ||
+      typeof file.originalName !== "string" ||
+      !file.originalName.trim()
+    ) {
+      throw new BadRequestError("File name is required");
     }
 
-    if (file.size <= 0) {
-      throw new Error("File cannot be empty");
+    if (file.size <= 0 || !file.buffer || file.buffer.length === 0) {
+      throw new BadRequestError("File cannot be empty");
     }
 
     if (
@@ -125,7 +171,9 @@ export class FileService {
         file.mimeType as (typeof ALLOWED_MIME_TYPES)[number],
       )
     ) {
-      throw new Error(`Unsupported file type: ${file.mimeType}`);
+      throw new UnsupportedMediaTypeError(
+        `Unsupported file type: ${file.mimeType}`,
+      );
     }
   }
 }

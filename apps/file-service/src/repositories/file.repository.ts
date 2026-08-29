@@ -15,22 +15,6 @@ export class FileRepository {
     });
   }
 
-  async findById(id: string) {
-    return prisma.file.findUnique({
-      where: {
-        id,
-      },
-    });
-  }
-
-  async findByStorageKey(storageKey: string) {
-    return prisma.file.findUnique({
-      where: {
-        storageKey,
-      },
-    });
-  }
-
   async findByUserId(userId: string) {
     return prisma.file.findMany({
       where: {
@@ -42,46 +26,33 @@ export class FileRepository {
     });
   }
 
-  async updateStatus(id: string, status: string) {
-    return prisma.file.update({
+  async findByStorageKeyAndUser(storageKey: string, userId: string) {
+    return prisma.file.findFirst({
+      where: {
+        storageKey,
+        userId,
+      },
+    });
+  }
+
+  async deleteByStorageKeyAndUser(storageKey: string, userId: string) {
+    return prisma.file.deleteMany({
+      where: {
+        storageKey,
+        userId,
+      },
+    });
+  }
+
+  async updateStatusAndUser(id: string, userId: string, status: string) {
+    return prisma.file.updateMany({
       where: {
         id,
+        userId,
       },
       data: {
         status,
       },
     });
   }
-
-  async delete(id: string) {
-    return prisma.file.delete({
-      where: {
-        id,
-      },
-    });
-  }
-
-  async findByStorageKeyAndUser(
-  storageKey: string,
-  userId: string,
-) {
-  return prisma.file.findFirst({
-    where: {
-      storageKey,
-      userId,
-    },
-  });
-}
-
-async deleteByStorageKeyAndUser(
-  storageKey: string,
-  userId: string,
-) {
-  return prisma.file.deleteMany({
-    where: {
-      storageKey,
-      userId,
-    },
-  });
-}
 }
