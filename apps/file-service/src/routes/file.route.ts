@@ -35,6 +35,16 @@ router.post(
 router.get("/", fileController.list);
 
 router.get(
+  "/meta/:idOrKey",
+  fileController.getMetadata,
+);
+
+router.get(
+  "/:idOrKey/meta",
+  fileController.getMetadata,
+);
+
+router.get(
   "/:storageKey",
   fileController.download,
 );

@@ -26,11 +26,32 @@ export class FileRepository {
     });
   }
 
+  async findByIdAndUser(id: string, userId: string) {
+    return prisma.file.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+  }
+
   async findByStorageKeyAndUser(storageKey: string, userId: string) {
     return prisma.file.findFirst({
       where: {
         storageKey,
         userId,
+      },
+    });
+  }
+
+  async findByIdOrStorageKeyAndUser(idOrKey: string, userId: string) {
+    return prisma.file.findFirst({
+      where: {
+        userId,
+        OR: [
+          { id: idOrKey },
+          { storageKey: idOrKey },
+        ],
       },
     });
   }

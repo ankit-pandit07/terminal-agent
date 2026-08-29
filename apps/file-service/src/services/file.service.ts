@@ -114,6 +114,19 @@ export class FileService {
     };
   }
 
+  async getFileMetadata(idOrKey: string, userId: string) {
+    const file = await this.fileRepository.findByIdOrStorageKeyAndUser(
+      idOrKey,
+      userId,
+    );
+
+    if (!file) {
+      throw new NotFoundError("File not found");
+    }
+
+    return file;
+  }
+
   async deleteFile(storageKey: string, userId: string): Promise<void> {
     const file = await this.fileRepository.findByStorageKeyAndUser(
       storageKey,

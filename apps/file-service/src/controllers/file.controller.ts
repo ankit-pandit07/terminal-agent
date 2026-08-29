@@ -124,4 +124,32 @@ export class FileController {
       next(error);
     }
   };
+
+  getMetadata = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const idOrKey = req.params.idOrKey || req.params.storageKey || req.params.id;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new UnauthorizedError("Authentication required.");
+      }
+
+      if (!idOrKey || typeof idOrKey !== "string" || !idOrKey.trim()) {
+        throw new BadRequestError("File identifier is required");
+      }
+
+      const file = await this.fileService.getFileMetadata(idOrKey.trim(), userId);
+
+      res.status(200).json({
+        success: true,
+        file,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
