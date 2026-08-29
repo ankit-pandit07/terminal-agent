@@ -8,6 +8,7 @@ import { ParserService } from "../parsers/parser.service.js";
 import { FileRepository } from "../repositories/file.repository.js";
 import { FileService } from "../services/file.service.js";
 import { LocalStorage } from "../storage/local.storage.js";
+import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -18,11 +19,21 @@ const fileRepository = new FileRepository();
 const fileService = new FileService(storage, parserService, fileRepository);
 
 const fileController = new FileController(fileService);
-
-router.post("/upload", uploadMiddleware.single("file"), fileController.upload);
-
-router.get("/:storageKey", fileController.download);
-
-router.delete("/:storageKey", fileController.delete);
+router.post(
+  "/upload",
+  requireAuth,
+  uploadMiddleware.single("file"),
+  fileController.upload,
+);
+router.get(
+  "/:storageKey",
+  requireAuth,
+  fileController.download,
+);
+router.delete(
+  "/:storageKey",
+  requireAuth,
+  fileController.delete,
+);
 
 export default router;

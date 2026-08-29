@@ -23,7 +23,10 @@ export class FileService {
     private readonly fileRepository: FileRepository,
   ) {}
 
-  async processUpload(file: UploadedFile): Promise<ProcessedFile> {
+  async processUpload(
+    file: UploadedFile,
+    userId: string,
+  ): Promise<ProcessedFile> {
     this.validateFile(file);
 
     const id = randomUUID();
@@ -40,7 +43,7 @@ export class FileService {
         typeof parsed.text === "string" ? parsed.text : undefined;
 
       const databaseFile = await this.fileRepository.create({
-        userId: "system",
+        userId,
         originalName: file.originalName,
         mimeType: file.mimeType,
         size: file.size,

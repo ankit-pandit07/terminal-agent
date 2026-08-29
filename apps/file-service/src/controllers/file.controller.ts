@@ -22,8 +22,20 @@ export class FileController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      // Get authenticated user
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
       if (!req.file) {
         res.status(400).json({
+          success: false,
           error: "File is required",
         });
         return;
@@ -36,7 +48,10 @@ export class FileController {
         buffer: req.file.buffer,
       };
 
-      const result = await this.fileService.processUpload(file);
+      const result = await this.fileService.processUpload(
+        file,
+        userId,
+      );
 
       res.status(201).json({
         success: true,
