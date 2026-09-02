@@ -224,6 +224,40 @@ export function Terminal() {
                 );
               }
 
+              if (event.type === "planning") {
+                return (
+                  <div key={i} className="text-blue-400 flex items-start gap-1.5">
+                    <span className="text-zinc-600 shrink-0">[{time}]</span>
+                    <span className="shrink-0">⚙</span>
+                    <span>
+                      Planning:{" "}
+                      <span className="text-zinc-300">
+                        {String(event.message ?? "Formulating execution plan...")}
+                      </span>
+                    </span>
+                  </div>
+                );
+              }
+
+              if (event.type === "plan-created") {
+                const stepsCount = Number(event.steps ?? 0);
+                return (
+                  <div key={i} className="text-emerald-400 flex items-start gap-1.5">
+                    <span className="text-zinc-600 shrink-0">[{time}]</span>
+                    <span className="shrink-0">📋</span>
+                    <span>
+                      Plan created:{" "}
+                      <span className="text-zinc-300">
+                        {String(
+                          event.message ??
+                            `${stepsCount} execution step${stepsCount === 1 ? "" : "s"}`,
+                        )}
+                      </span>
+                    </span>
+                  </div>
+                );
+              }
+
               if (event.type === "error") {
                 return (
                   <div key={i} className="text-rose-400 font-medium flex items-start gap-1.5">

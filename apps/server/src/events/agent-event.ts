@@ -6,6 +6,7 @@ export type AgentEvent =
   | {
       type: "plan-created";
       steps: number;
+      message?: string;
     }
   | {
       type: "tool-start";

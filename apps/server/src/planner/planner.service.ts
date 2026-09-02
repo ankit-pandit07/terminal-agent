@@ -10,6 +10,7 @@ import {
 } from "./planner.js";
 import { JsonParser } from "../parser/json.parser.js";
 import { buildPlannerPrompt } from "../prompts/planner.prompt.js";
+import { toolDefinitions } from "../tools/definitions/index.js";
 
 import type { WorkspaceInfo } from "../workspace/workspace.types.js";
 import type { Observation, Reflection } from "../observation/observation.js";
@@ -231,6 +232,27 @@ ${Object.entries(workspace.scripts)
     });
 
     const plan = this.parser.parse(response.text);
+
+    const fileIdMatches = attachedFilesContext
+      ? Array.from(attachedFilesContext.matchAll(/file_id="([^"]+)"/g)).map(
+          (m) => m[1],
+        )
+      : [];
+
+    console.log(
+      `[DEBUG PLANNER]\n` +
+        `planner=PlannerService\n` +
+        `provider=OllamaProvider\n` +
+        `model=qwen2.5:3b\n` +
+        `tools=[${toolDefinitions.map((t) => t.name).join(", ")}]\n` +
+        `hasFileContext=${Boolean(attachedFilesContext && attachedFilesContext.trim().length > 0)}\n` +
+        `attachedFileCount=${fileIdMatches.length}\n` +
+        `attachedFileIds=[${fileIdMatches.join(", ")}]\n` +
+        `rawResponseLength=${response.text.length}\n` +
+        `parsedPlan=${JSON.stringify(plan)}\n` +
+        `selectedTools=[${plan.steps.map((s) => s.tool).join(", ")}]\n` +
+        `toolInputKeys=${JSON.stringify(plan.steps.map((s) => Object.keys(s.input || {})))}`,
+    );
 
     plan.source = "ai";
     return plan;

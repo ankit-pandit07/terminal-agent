@@ -177,6 +177,7 @@ ${executionHistory}
       emit(emitter, {
         type: "plan-created",
         steps: plan.steps.length,
+        message: `Generated plan with ${plan.steps.length} step${plan.steps.length === 1 ? "" : "s"}.`,
       });
 
       //Safety check

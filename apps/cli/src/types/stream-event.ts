@@ -6,6 +6,7 @@ export interface PlanningEvent {
 export interface PlanCreatedEvent {
     type: "plan-created";
     steps:number;
+    message?: string;
 }
 
 export interface ToolStartEvent {
