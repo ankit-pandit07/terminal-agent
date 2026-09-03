@@ -7,6 +7,8 @@ import { MarkdownContent } from "@/components/shared/markdown-content";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+import { AttachmentCard } from "./attachment-card";
+
 interface Props {
   message: Message;
 }
@@ -71,7 +73,21 @@ export function MessageItem({ message }: Props) {
           )}
         >
           {isUser ? (
-            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="space-y-2.5">
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {message.attachments.map((attachment, idx) => (
+                    <AttachmentCard
+                      key={attachment.fileId || `att-${idx}`}
+                      attachment={attachment}
+                    />
+                  ))}
+                </div>
+              )}
+              {message.content && (
+                <div className="whitespace-pre-wrap break-words">{message.content}</div>
+              )}
+            </div>
           ) : (
             <MarkdownContent content={message.content} />
           )}

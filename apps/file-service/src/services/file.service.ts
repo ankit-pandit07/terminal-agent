@@ -86,11 +86,11 @@ export class FileService {
   }
 
   async getFile(
-    storageKey: string,
+    idOrKey: string,
     userId: string,
   ): Promise<FileDownloadResult> {
-    const file = await this.fileRepository.findByStorageKeyAndUser(
-      storageKey,
+    const file = await this.fileRepository.findByIdOrStorageKeyAndUser(
+      idOrKey,
       userId,
     );
 
@@ -98,13 +98,13 @@ export class FileService {
       throw new NotFoundError("File not found");
     }
 
-    const exists = await this.storage.exists(storageKey);
+    const exists = await this.storage.exists(file.storageKey);
 
     if (!exists) {
       throw new NotFoundError("File not found");
     }
 
-    const buffer = await this.storage.get(storageKey);
+    const buffer = await this.storage.get(file.storageKey);
 
     return {
       buffer,

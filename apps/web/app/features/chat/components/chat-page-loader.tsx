@@ -42,6 +42,7 @@ export function ChatPageLoader() {
                   | "user"
                   | "assistant",
                 content: m.content,
+                attachments: m.attachments,
               }));
 
               setMessages(normalized);

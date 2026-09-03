@@ -1,16 +1,25 @@
 import { create } from "zustand";
 import { StreamEvent } from "../api/chat.stream";
 
+export interface ChatAttachment {
+  fileId: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  storageKey?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments?: ChatAttachment[];
 }
 
 interface ChatStore {
   messages: Message[];
 
-  addUserMessage: (text: string) => void;
+  addUserMessage: (text: string, attachments?: ChatAttachment[]) => void;
   addAssistantMessage: (text: string) => void;
   setMessages: (messages: Message[]) => void;
 
@@ -38,7 +47,7 @@ interface ChatStore {
 export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
 
-  addUserMessage: (text) =>
+  addUserMessage: (text, attachments) =>
     set((state) => ({
       messages: [
         ...state.messages,
@@ -46,6 +55,8 @@ export const useChatStore = create<ChatStore>((set) => ({
           id: crypto.randomUUID(),
           role: "user",
           content: text,
+          attachments:
+            attachments && attachments.length > 0 ? attachments : undefined,
         },
       ],
     })),

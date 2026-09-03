@@ -72,20 +72,19 @@ export async function processAgentRequest(
       conversation = await conversationRepository.create(request.message, request.userId);
     }
 
-    // Save User Message
-    await messageRepository.create(conversation.id, Role.USER, request.message);
-
-    // STEP 1: Save conversation to memory
-    await memoryService.saveConversation(
-      conversation.id,
-      "user-message",
-      request.message,
-      request.userId
-    );
-
     // Hydrate attached files if provided in the current request
     let attachedFilesContext = "";
     let attachedFilesSummary = "";
+    let attachmentsMeta:
+      | Array<{
+          fileId: string;
+          originalName: string;
+          mimeType: string;
+          size: number;
+          storageKey: string;
+        }>
+      | undefined;
+
     if (request.fileIds && request.fileIds.length > 0 && request.authToken) {
       const hydrated = await hydrateAttachedFiles(
         request.fileIds,
@@ -93,6 +92,16 @@ export async function processAgentRequest(
       );
       attachedFilesContext = hydrated.context;
       attachedFilesSummary = hydrated.summary;
+
+      if (hydrated.files.length > 0) {
+        attachmentsMeta = hydrated.files.map((fileMeta) => ({
+          fileId: fileMeta.id,
+          originalName: fileMeta.originalName,
+          mimeType: fileMeta.mimeType,
+          size: fileMeta.size,
+          storageKey: fileMeta.storageKey,
+        }));
+      }
 
       for (const fileMeta of hydrated.files) {
         try {
@@ -126,6 +135,22 @@ export async function processAgentRequest(
         }
       }
     }
+
+    // Save User Message with attachment metadata
+    await messageRepository.create(
+      conversation.id,
+      Role.USER,
+      request.message,
+      attachmentsMeta,
+    );
+
+    // STEP 1: Save conversation to memory
+    await memoryService.saveConversation(
+      conversation.id,
+      "user-message",
+      request.message,
+      request.userId
+    );
 
     // Create Execution
     execution = await executionRepository.create(

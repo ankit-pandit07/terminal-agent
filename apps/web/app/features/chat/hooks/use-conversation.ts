@@ -61,6 +61,7 @@ export function useConversations() {
             | "user"
             | "assistant",
           content: m.content,
+          attachments: m.attachments,
         }));
 
         setMessages(normalizedMessages);

@@ -6,6 +6,7 @@ export class MessageRepository {
     conversationId: string,
     role: Role,
     content: string,
+    attachments?: unknown,
   ) {
     const [message] = await prisma.$transaction([
       prisma.message.create({
@@ -13,6 +14,7 @@ export class MessageRepository {
           conversationId,
           role,
           content,
+          ...(attachments ? { attachments: attachments as any } : {}),
         },
       }),
       prisma.conversation.update({

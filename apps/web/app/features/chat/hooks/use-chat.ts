@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useChatStore } from "../store/chat.store";
+import { useChatStore, type ChatAttachment } from "../store/chat.store";
 import { useConversationStore } from "../store/conversation.store";
 import { getConversation } from "../api/conversation.api";
 import { streamChat } from "../api/chat.stream";
@@ -44,7 +44,11 @@ export function useChat() {
     }
   }
 
-  async function stream(message: string, fileIds?: string[]) {
+  async function stream(
+    message: string,
+    fileIds?: string[],
+    attachments?: ChatAttachment[],
+  ) {
     if (loading || !message.trim()) return;
 
     const controller = new AbortController();
@@ -53,7 +57,7 @@ export function useChat() {
     setLoading(true);
     setRecovery(null);
 
-    addUserMessage(message);
+    addUserMessage(message, attachments);
 
     // Record the user request as frame #1 for Telemetry Inspector
     addEvent({

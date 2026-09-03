@@ -1,9 +1,11 @@
 import { api } from "@/lib/api";
+import type { ChatAttachment } from "../store/chat.store";
 
 export interface ConversationMessage {
   id: string;
   role: "USER" | "ASSISTANT" | "user" | "assistant";
   content: string;
+  attachments?: ChatAttachment[];
   createdAt?: string;
 }
 

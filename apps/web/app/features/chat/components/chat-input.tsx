@@ -162,9 +162,16 @@ export function ChatInput({ onSuggestedPrompt }: ChatInputProps) {
     const message = value.trim();
     if (!message || loading || isUploading) return;
 
-    const readyFileIds = attachments
+    const readyAttachments = attachments
       .filter((a) => a.status === "ready" && a.fileId)
-      .map((a) => a.fileId as string);
+      .map((a) => ({
+        fileId: a.fileId as string,
+        originalName: a.name,
+        mimeType: a.mimeType,
+        size: a.size,
+      }));
+
+    const readyFileIds = readyAttachments.map((a) => a.fileId);
 
     setValue("");
     setAttachments([]);
@@ -176,6 +183,7 @@ export function ChatInput({ onSuggestedPrompt }: ChatInputProps) {
       await stream(
         message,
         readyFileIds.length > 0 ? readyFileIds : undefined,
+        readyAttachments.length > 0 ? readyAttachments : undefined,
       );
     } catch (error) {
       console.error("Failed to send message:", error);
