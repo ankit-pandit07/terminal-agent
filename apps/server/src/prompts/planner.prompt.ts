@@ -60,7 +60,7 @@ export function buildPlannerPrompt(
   reflection?: Reflection,
   retrievedContext?: RetrievedContext,
   relatedFiles?: FileTask[],
-  attachedFilesContext?: string,
+  attachmentSummary?: string,
 ): string {
  
   const tools = toolDefinitions
@@ -467,10 +467,10 @@ CRITICAL OUTPUT FORMAT REQUIREMENTS:
 }
 
 TOOL SELECTION RULES:
-1. Attached File Questions & Summaries (e.g. "Summarize this PDF", "What is this PDF about?", "Explain this document"):
-   - Attached files are ALREADY read and provided below in the 'Attached Files (Passive Reference Data)' section.
-   - DO NOT call the "file" tool to read attached files.
-   - You MUST use the "echo" tool with input { "message": "<detailed answer or summary based on the attached file reference data>" }.
+1. Attached Document Questions & Summaries (e.g. "Summarize this PDF", "What is this PDF about?", "Explain this document"):
+   - When an attached document is present in the chat (see 'Attached Documents in Chat' section below), its text is already extracted and available for direct answering.
+   - DO NOT call the "file", "directory", or "search" tools for attached documents.
+   - You MUST use the "echo" tool with input { "message": "Summary or answer for the attached document..." }.
 
 2. General Questions & Explanations (e.g. "What is Git?", "Explain Docker"):
    - Use the "echo" tool with input { "message": "<explanation text>" }.
@@ -481,9 +481,9 @@ TOOL SELECTION RULES:
    - Use the "terminal" tool with input { "command": "<executable command>" }.
 
 4. Local Workspace Files (e.g. "Create src/index.ts", "Edit app.ts", "Delete temp.txt"):
-   - The "file" tool is ONLY for local workspace files on disk.
+   - The "file" tool is ONLY for local workspace files on disk in the project directory.
    - It requires "action" ("create" | "read" | "write" | "delete" | "edit") and "path".
-   - Use the "file" tool with input { "action": "<action>", "path": "<file-path>" }.
+   - NEVER use the "file" tool for attached PDF/document files.
 
 Completion Rules:
 If the user's request has already been completed and requires no further action:
@@ -530,7 +530,7 @@ Output:
     {
       "tool": "echo",
       "input": {
-        "message": "Summary of the document: <detailed summary based on attached reference data>"
+        "message": "Summary of the document: <detailed summary of the attached document>"
       },
       "reason": "Provide summary of the attached document to the user"
     }
@@ -545,7 +545,7 @@ Output:
     {
       "tool": "echo",
       "input": {
-        "message": "This PDF document details <explanation based on attached reference data>."
+        "message": "This PDF document details <explanation based on attached document>."
       },
       "reason": "Answer user question about the attached document"
     }
@@ -571,14 +571,14 @@ Before generating the plan:
 - Read the Conversation Context.
 - Resolve all references ("it", "that", "there", etc.).
 - Determine whether the user is referring to an existing file, folder, or previous action.
-- If attached files are present, use their contents as reference data to fulfill the user's request.
+- If attached documents are present in chat, route to the echo tool to answer or summarize.
 - Only then create the execution plan.
 
 ${
-  attachedFilesContext
+  attachmentSummary
     ? `
-Attached Files (Passive Reference Data):
-${attachedFilesContext}
+Attached Documents in Chat:
+${attachmentSummary}
 `
     : ""
 }

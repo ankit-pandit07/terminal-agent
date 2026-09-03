@@ -82,12 +82,14 @@ export async function processAgentRequest(
 
     // Hydrate attached files if provided in the current request
     let attachedFilesContext = "";
+    let attachedFilesSummary = "";
     if (request.fileIds && request.fileIds.length > 0 && request.authToken) {
       const hydrated = await hydrateAttachedFiles(
         request.fileIds,
         request.authToken,
       );
       attachedFilesContext = hydrated.context;
+      attachedFilesSummary = hydrated.summary;
 
       for (const fileMeta of hydrated.files) {
         try {
@@ -171,6 +173,7 @@ ${executionHistory}
         sessionContext,
         lastObservation,
         lastReflection,
+        attachedFilesSummary,
         attachedFilesContext,
       );
 

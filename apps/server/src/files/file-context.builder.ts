@@ -53,13 +53,36 @@ ${fileBlocks.join("\n\n")}
 </attached_files>`;
 }
 
+export function formatAttachmentSummary(files: FileMetadataDto[]): string {
+  if (!files || files.length === 0) {
+    return "";
+  }
+
+  const items = files.map((file) => {
+    const hasText = Boolean(
+      file.extractedText && file.extractedText.trim().length > 0,
+    );
+    const textLen = file.extractedText ? file.extractedText.length : 0;
+    return `- Attached Document: "${file.originalName}" | ID: ${file.id} | Type: ${file.mimeType} | Size: ${formatFileSize(file.size)} | Content Extracted: ${hasText ? `Yes (${textLen} chars)` : "No"}`;
+  });
+
+  return `<attached_documents_summary count="${files.length}">
+${items.join("\n")}
+Notice: The full document content is already extracted and available in memory for direct answering. Do NOT invoke local filesystem or search tools for attached documents. Use the "echo" tool to answer or summarize attached documents.
+</attached_documents_summary>`;
+}
+
 export async function hydrateAttachedFiles(
   fileIds: string[] | undefined,
   authToken: string | undefined,
   client: FileServiceClient = fileServiceClient,
-): Promise<{ context: string; files: FileMetadataDto[] }> {
+): Promise<{
+  context: string;
+  summary: string;
+  files: FileMetadataDto[];
+}> {
   if (!fileIds || fileIds.length === 0 || !authToken) {
-    return { context: "", files: [] };
+    return { context: "", summary: "", files: [] };
   }
 
   const files: FileMetadataDto[] = [];
@@ -77,5 +100,6 @@ export async function hydrateAttachedFiles(
   }
 
   const context = formatFileEnvelope(files);
-  return { context, files };
+  const summary = formatAttachmentSummary(files);
+  return { context, summary, files };
 }
