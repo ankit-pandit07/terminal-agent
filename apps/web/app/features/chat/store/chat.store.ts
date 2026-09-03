@@ -6,7 +6,6 @@ export interface ChatAttachment {
   originalName: string;
   mimeType: string;
   size: number;
-  storageKey?: string;
 }
 
 export interface Message {

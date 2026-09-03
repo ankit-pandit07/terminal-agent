@@ -65,8 +65,7 @@ export function getFileTypeInfo(mimeType?: string, name?: string) {
 export function AttachmentCard({ attachment, className }: AttachmentCardProps) {
   const fileInfo = getFileTypeInfo(attachment.mimeType, attachment.originalName);
   const sizeFormatted = formatFileSize(attachment.size);
-  const fileKey = attachment.storageKey || attachment.fileId;
-  const downloadUrl = `${resolveFileServiceBaseUrl()}/files/${encodeURIComponent(fileKey)}`;
+  const downloadUrl = `${resolveFileServiceBaseUrl()}/files/${encodeURIComponent(attachment.fileId)}`;
 
   return (
     <a

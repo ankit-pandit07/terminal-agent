@@ -81,7 +81,6 @@ export async function processAgentRequest(
           originalName: string;
           mimeType: string;
           size: number;
-          storageKey: string;
         }>
       | undefined;
 
@@ -99,7 +98,6 @@ export async function processAgentRequest(
           originalName: fileMeta.originalName,
           mimeType: fileMeta.mimeType,
           size: fileMeta.size,
-          storageKey: fileMeta.storageKey,
         }));
       }
 
@@ -113,7 +111,6 @@ export async function processAgentRequest(
               originalName: fileMeta.originalName,
               mimeType: fileMeta.mimeType,
               size: fileMeta.size,
-              storageKey: fileMeta.storageKey,
             }),
             request.userId,
           );
