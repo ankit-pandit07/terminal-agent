@@ -530,9 +530,9 @@ Output:
     {
       "tool": "echo",
       "input": {
-        "message": "Summary of the document: <detailed summary of the attached document>"
+        "message": ""
       },
-      "reason": "Provide summary of the attached document to the user"
+      "reason": "Answer user request based on attached document"
     }
   ]
 }
@@ -545,7 +545,7 @@ Output:
     {
       "tool": "echo",
       "input": {
-        "message": "This PDF document details <explanation based on attached document>."
+        "message": ""
       },
       "reason": "Answer user question about the attached document"
     }
